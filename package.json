@@ -1,6 +1,6 @@
 {
   "name": "mad-marathon-menu-builder",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Offline Mad Marathon menu constructor",
   "main": "main.js",
   "scripts": {
