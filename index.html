@@ -1,0 +1,3465 @@
+<html lang="ru" data-theme="dark"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конструктор меню</title>
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-border: #d4d1ca;
+      --color-text: #28251d;
+      --color-text-muted: #6f6d68;
+      --color-primary: #5d6bc5;
+      --color-primary-hover: #4f5db5;
+      --radius-sm: 0.375rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.10);
+      --transition-interactive: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-body: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    [data-theme="dark"] {
+      --color-bg: #14131a;
+      --color-surface: #1d1b25;
+      --color-surface-2: #252330;
+      --color-border: rgba(255,255,255,0.12);
+      --color-text: #f1eff7;
+      --color-text-muted: #b7b3c9;
+      --color-primary: #9aa7ff;
+      --color-primary-hover: #b1bbff;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.22);
+      --shadow-md: 0 10px 32px rgba(0,0,0,0.38);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    body {
+      margin: 0;
+      height: 100dvh;
+      min-height: 100dvh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.55;
+      color: var(--color-text);
+      background:
+        radial-gradient(circle at top, rgba(154,167,255,0.18), transparent 40%),
+        var(--color-bg);
+      overflow: hidden;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--color-primary) 70%, #fff 10%) rgba(255,255,255,0.05);
+    }
+    *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    *::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+    }
+    *::-webkit-scrollbar-thumb {
+      border: 2px solid rgba(18,17,24,0.9);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,173,205,0.95), rgba(154,167,255,0.9));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
+    }
+    *::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(255,197,220,1), rgba(183,193,255,1));
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    img, canvas { display: block; max-width: 100%; height: auto; }
+    .page {
+      width: 100%;
+      height: 100dvh;
+      min-height: 0;
+      margin: 0;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 25;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: var(--space-4);
+      padding: 0.55rem var(--space-4);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(135deg, rgba(29,27,38,0.96), rgba(18,17,25,0.9)),
+        var(--color-bg);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.24);
+      backdrop-filter: blur(16px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-width: 0;
+      min-height: 48px;
+    }
+    .top-logo {
+      width: 176px;
+      max-height: 48px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 22px rgba(255, 82, 127, 0.22));
+    }
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      color: var(--color-primary);
+      flex: 0 0 auto;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(2rem, 1.45rem + 2.1vw, 3.25rem);
+      line-height: 1.04;
+    }
+    .brand p {
+      margin: 0.18rem 0 0;
+      color: var(--color-text-muted);
+      font-size: clamp(0.95rem, 0.88rem + 0.25vw, 1.15rem);
+    }
+    .diagnostics-banner {
+      margin: 0 var(--space-4) var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid rgba(255, 198, 92, 0.28);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 198, 92, 0.11);
+      color: #ffe3a4;
+      font-size: var(--text-sm);
+    }
+    .diagnostics-banner[hidden] { display: none; }
+    .top-actions {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+    .theme-toggle, .top-btn, .ghost-btn, .primary-btn, .danger-btn, .file-picker-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      border-radius: var(--radius-md);
+      padding: 0.68rem 0.95rem;
+      border: 1px solid var(--color-border);
+      transition:
+        transform var(--transition-interactive),
+        background var(--transition-interactive),
+        border-color var(--transition-interactive),
+        color var(--transition-interactive);
+      text-decoration: none;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .icon-btn, .top-actions .top-btn, .file-picker-btn {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0;
+      flex: 0 0 auto;
+    }
+    .theme-toggle, .top-btn, .ghost-btn, .file-picker-btn {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+    }
+    .primary-btn {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: transparent;
+    }
+    .top-actions .primary-btn,
+    .settings-footer .primary-btn,
+    .history-footer .primary-btn {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      border-color: var(--color-border);
+    }
+    .theme-toggle:hover, .top-btn:hover, .ghost-btn:hover,
+    .primary-btn:hover, .danger-btn:hover, .file-picker-btn:hover {
+      transform: translateY(-1px);
+    }
+    .primary-btn:hover { background: var(--color-primary-hover); }
+    .top-actions .primary-btn:hover,
+    .settings-footer .primary-btn:hover,
+    .history-footer .primary-btn:hover {
+      background: var(--color-surface);
+      border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+    }
+    button:active,
+    .file-picker-btn:active {
+      transform: translateY(1px) scale(0.96);
+    }
+    button.is-tapped,
+    .file-picker-btn.is-tapped {
+      animation: tapFlash 320ms ease;
+    }
+    .icon-btn.is-success {
+      animation: successPop 700ms ease;
+      border-color: rgba(131, 255, 196, 0.65);
+      color: #d9ffe9;
+    }
+    .danger-btn {
+      background: linear-gradient(135deg, #ff6c86, #d94f70);
+      color: #fff;
+      border-color: transparent;
+    }
+    .danger-btn:hover {
+      background: linear-gradient(135deg, #ff8299, #e76280);
+    }
+    [data-tooltip] {
+      position: relative;
+    }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 220;
+      width: max-content;
+      max-width: 240px;
+      padding: 0.48rem 0.68rem;
+      border: 1px solid rgba(154,167,255,0.28);
+      border-radius: 999px;
+      background:
+        linear-gradient(135deg, rgba(37,35,48,0.98), rgba(23,21,29,0.98)),
+        var(--color-surface);
+      color: var(--color-text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.2;
+      box-shadow: 0 14px 38px rgba(0,0,0,0.42);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-4px) scale(0.96);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+    [data-tooltip]::before {
+      content: "";
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 16px;
+      z-index: 221;
+      width: 10px;
+      height: 10px;
+      border-left: 1px solid rgba(154,167,255,0.28);
+      border-top: 1px solid rgba(154,167,255,0.28);
+      background: #252330;
+      opacity: 0;
+      pointer-events: none;
+      transform: rotate(45deg) translateY(-4px);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+    [data-tooltip]:hover::after,
+    [data-tooltip]:hover::before,
+    [data-tooltip]:focus-visible::after,
+    [data-tooltip]:focus-visible::before {
+      opacity: 1;
+    }
+    [data-tooltip]:hover::after,
+    [data-tooltip]:focus-visible::after {
+      transform: translateY(0) scale(1);
+    }
+    [data-tooltip]:hover::before,
+    [data-tooltip]:focus-visible::before {
+      transform: rotate(45deg) translateY(0);
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(560px, 1.15fr) minmax(330px, 0.85fr);
+      gap: var(--space-2);
+      padding: 0 var(--space-4) var(--space-4);
+      align-items: stretch;
+      min-height: 0;
+      overflow: hidden;
+      overflow-anchor: none;
+    }
+
+    .panel, .preview-panel, .settings-drawer {
+      background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(12px);
+      min-width: 0;
+    }
+    .panel, .preview-panel { padding: var(--space-4); }
+    .panel {
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      overflow-anchor: none;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+    .preview-panel {
+      min-height: 0;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      padding: var(--space-2);
+    }
+
+    .panel h2, .preview-panel h2, .settings-header h2 {
+      margin: 0;
+      font-size: clamp(1.5rem, 1.2rem + 1vw, 2.2rem);
+      line-height: 1.06;
+    }
+    .panel > h2,
+    .preview-panel > h2 {
+      display: none;
+    }
+    .preview-note, .section-note, .field-help {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .preview-note { margin: 0 0 var(--space-3); }
+
+    .block-card, .settings-group {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-3);
+    }
+    .block-card h3, .settings-group h3 {
+      margin: 0 0 var(--space-3);
+      font-size: clamp(1.18rem, 1.05rem + 0.4vw, 1.45rem);
+    }
+
+    .field-grid { display: grid; gap: var(--space-3); }
+    .field-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .template-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin: var(--space-3) 0;
+    }
+    .template-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.62rem 0.8rem;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--color-surface-2) 92%, transparent);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: border-color var(--transition-interactive), color var(--transition-interactive), background var(--transition-interactive);
+    }
+    .template-option:has(input:checked) {
+      border-color: var(--color-primary);
+      color: var(--color-text);
+      background: rgba(154,167,255,0.14);
+    }
+    .template-option input { accent-color: var(--color-primary); }
+    .menu-head-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+    .menu-head-fields .field {
+      margin-bottom: 0;
+    }
+
+    .field {
+      display: grid;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+      min-width: 0;
+      align-content: flex-start;
+    }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: #17151d;
+      color: var(--color-text);
+      padding: 0.78rem 0.9rem;
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+	
+	input[type="text"]:focus,
+	input[type="number"]:focus,
+	textarea:focus,
+	select:focus {
+	  border-color: var(--color-primary);
+	  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+	  outline: none;
+	}
+
+    .file-row {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr);
+      gap: var(--space-2);
+      align-items: center;
+	  min-width: 0;
+    }
+    .file-input {
+      position: fixed;
+      top: 0;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      overflow: hidden;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .file-name-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 0.68rem 0.9rem;
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--color-bg) 86%, transparent);
+      color: var(--color-text-muted);
+      min-width: 0;
+	  max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+	
+	.daytitle-wrap {
+	  position: relative;
+	  display: flex;
+	  align-items: center;
+	}
+	.daytitle-wrap input {
+	  flex: 1;
+	  padding-right: 2.8rem;
+	}
+	.cal-trigger {
+	  position: absolute;
+	  right: 0.5rem;
+	  background: none;
+	  border: none;
+	  color: var(--color-text-muted);
+	  cursor: pointer;
+	  padding: 0.3rem;
+	  border-radius: var(--radius-sm);
+	  display: flex;
+	  align-items: center;
+	  transition: color var(--transition-interactive);
+	}
+	.cal-trigger:hover { color: var(--color-primary); }
+
+    .tags-combobox {
+      position: relative;
+      min-width: 0;
+    }
+    .tags-combobox input {
+      padding-right: 2.8rem;
+    }
+    .tags-trigger {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--color-text-muted);
+      transition: color var(--transition-interactive), background var(--transition-interactive), transform var(--transition-interactive);
+    }
+    .tags-trigger:hover,
+    .tags-trigger.open {
+      color: var(--color-primary-hover);
+      background: rgba(154,167,255,0.12);
+    }
+    .tags-trigger.open svg {
+      transform: rotate(180deg);
+    }
+    .tags-trigger svg {
+      transition: transform var(--transition-interactive);
+    }
+    .tags-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      z-index: 120;
+      display: none;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0.35rem;
+      border: 1px solid rgba(154,167,255,0.32);
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
+        #17151d;
+      box-shadow: 0 18px 55px rgba(0,0,0,0.44);
+      backdrop-filter: blur(16px);
+    }
+    .tags-menu.open {
+      display: grid;
+      gap: 0.3rem;
+    }
+    .tag-suggestion,
+    .tag-suggestion-empty {
+      width: 100%;
+      min-height: 36px;
+      justify-content: flex-start;
+      padding: 0.48rem 0.65rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--color-text);
+      text-align: left;
+      font-size: var(--text-sm);
+    }
+    .tag-suggestion:hover {
+      border-color: rgba(154,167,255,0.28);
+      background: rgba(154,167,255,0.12);
+      color: var(--color-primary-hover);
+    }
+    .tag-suggestion-empty {
+      color: var(--color-text-muted);
+      cursor: default;
+    }
+
+	.cal-popup {
+	  position: absolute;
+	  top: calc(100% + 6px);
+	  right: 0;
+	  z-index: 100;
+	  background:
+	    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+	    var(--color-surface);
+	  border: 1px solid rgba(255,255,255,0.16);
+	  border-radius: var(--radius-md);
+	  box-shadow: 0 18px 55px rgba(0,0,0,0.38);
+	  backdrop-filter: blur(16px);
+	  padding: 0.9rem;
+	  width: min(310px, calc(100vw - 24px));
+	  min-width: 0;
+	  user-select: none;
+	  opacity: 0;
+	  pointer-events: none;
+	  transform: translateY(-6px);
+	  transition: opacity 180ms ease, transform 180ms ease;
+	}
+	.cal-popup.open {
+	  opacity: 1;
+	  pointer-events: auto;
+	  transform: translateY(0);
+	}
+
+	.cal-header {
+	  display: flex;
+	  align-items: center;
+	  justify-content: space-between;
+	  margin-bottom: 0.85rem;
+	  padding-bottom: 0.65rem;
+	  border-bottom: 1px solid var(--color-border);
+	}
+	.cal-header span {
+	  font-weight: 700;
+	  font-size: var(--text-sm);
+	  color: var(--color-text);
+	}
+	.cal-nav {
+	  background: none;
+	  border: 1px solid var(--color-border);
+	  color: var(--color-text);
+	  cursor: pointer;
+	  width: 34px;
+	  height: 34px;
+	  padding: 0;
+	  border-radius: var(--radius-sm);
+	  font-size: 1.15rem;
+	  transition: color var(--transition-interactive), background var(--transition-interactive);
+	}
+	.cal-nav:hover { color: var(--color-primary); background: var(--color-surface-2); }
+
+	.cal-grid {
+	  display: grid;
+	  grid-template-columns: repeat(7, 1fr);
+	  gap: 5px;
+	}
+	.cal-dow {
+	  text-align: center;
+	  font-size: 0.7rem;
+	  color: var(--color-text-muted);
+	  padding: 0.25rem 0;
+	  font-weight: 600;
+	}
+	.cal-day {
+	  text-align: center;
+	  min-height: 34px;
+	  display: grid;
+	  place-items: center;
+	  padding: 0.2rem;
+	  border-radius: var(--radius-sm);
+	  font-size: var(--text-sm);
+	  cursor: pointer;
+	  color: var(--color-text);
+	  transition: background var(--transition-interactive), color var(--transition-interactive);
+	}
+	.cal-day:hover { background: rgba(154,167,255,0.16); color: var(--color-primary-hover); }
+	.cal-day.today { color: var(--color-primary-hover); font-weight: 800; outline: 1px solid rgba(154,167,255,0.32); }
+	.cal-day.selected { background: var(--color-primary); color: #14131a; font-weight: 800; }
+	.cal-day.other-month { color: var(--color-text-muted); opacity: 0.4; }
+	.cal-day.empty { cursor: default; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+    }
+    .status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #previewCanvas {
+      width: auto;
+      height: auto;
+      max-width: min(100%, 580px);
+      max-height: min(82dvh, 820px);
+      margin: 0 auto;
+      border-radius: var(--radius-md);
+      box-shadow: 0 24px 75px rgba(0,0,0,0.34);
+    }
+    .meta {
+      display: none;
+    }
+
+    .settings-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(880px, 100%);
+      height: 100dvh;
+      z-index: 40;
+      border-radius: 0;
+      border-left: 1px solid var(--color-border);
+      transform: translateX(100%);
+      transition: transform var(--transition-interactive);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    .settings-drawer.open { transform: translateX(0); }
+
+    .settings-header {
+      padding: 0.75rem var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-3);
+      align-items: center;
+      background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    }
+    .settings-header h2 {
+      font-size: clamp(1.2rem, 1.05rem + 0.55vw, 1.6rem);
+    }
+    .settings-header .section-note {
+      margin: 0.08rem 0 0;
+      max-width: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+	
+	.icon-btn {
+	  min-height: 36px;
+	  min-width: 36px;
+	  padding: 0.5rem;
+	  border-radius: var(--radius-md);
+}
+
+    .settings-body {
+      padding: var(--space-4);
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+
+    .settings-footer {
+      padding: var(--space-4);
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    }
+    .settings-footer .icon-btn {
+      width: 44px;
+      min-width: 44px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-interactive);
+      z-index: 35;
+    }
+	
+	.history-drawer {
+	  position: fixed;
+	  top: 0;
+	  right: 0;
+	  width: min(420px, 100%);
+	  height: 100dvh;
+	  z-index: 40;
+	  border-radius: 0;
+	  border-left: 1px solid var(--color-border);
+	  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+	  backdrop-filter: blur(12px);
+	  box-shadow: var(--shadow-md);
+	  transform: translateX(100%);
+	  transition: transform var(--transition-interactive);
+	  display: grid;
+	  grid-template-rows: auto 1fr auto;
+	}
+	.history-drawer.open { transform: translateX(0); }
+
+	.history-header {
+	  padding: var(--space-4);
+	  border-bottom: 1px solid var(--color-border);
+	  display: flex;
+	  align-items: center;
+	  justify-content: space-between;
+	  gap: var(--space-3);
+	}
+	.history-header h2 {
+	  margin: 0;
+	  font-size: clamp(1.3rem, 1.1rem + 0.6vw, 1.8rem);
+	}
+
+	.history-body {
+	  padding: var(--space-4);
+	  overflow-y: auto;
+	  min-height: 0;
+	}
+
+	.history-empty {
+	  color: var(--color-text-muted);
+	  font-size: var(--text-sm);
+	  text-align: center;
+	  padding: var(--space-8) 0;
+	}
+
+	.history-item {
+	  display: flex;
+	  align-items: center;
+	  justify-content: space-between;
+	  gap: var(--space-3);
+	  padding: var(--space-3) var(--space-4);
+	  border: 1px solid var(--color-border);
+	  border-radius: var(--radius-lg);
+	  background: var(--color-surface-2);
+	  margin-bottom: var(--space-2);
+	  cursor: pointer;
+	  transition: background var(--transition-interactive), border-color var(--transition-interactive);
+	}
+	.history-item:hover { background: var(--color-surface); border-color: var(--color-primary); }
+
+	.history-item-info { min-width: 0; }
+	.history-item-date {
+	  font-weight: 600;
+	  font-size: var(--text-sm);
+	  color: var(--color-text);
+	  white-space: nowrap;
+	  overflow: hidden;
+	  text-overflow: ellipsis;
+	}
+	.history-item-meta {
+	  font-size: var(--text-xs);
+	  color: var(--color-text-muted);
+	  margin-top: 2px;
+	}
+    .history-tools {
+      padding: var(--space-3) var(--space-4) 0;
+    }
+    .history-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.45rem;
+    }
+    .history-tag {
+      display: inline-flex;
+      max-width: 100%;
+      padding: 0.18rem 0.5rem;
+      border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+      border-radius: 999px;
+      color: var(--color-primary-hover);
+      font-size: 0.72rem;
+      line-height: 1.2;
+    }
+
+	.history-item-del {
+	  background: none;
+	  border: none;
+	  color: var(--color-text-muted);
+	  cursor: pointer;
+	  padding: 0.3rem;
+	  border-radius: var(--radius-sm);
+	  flex: 0 0 auto;
+	  transition: color var(--transition-interactive);
+	}
+	.history-item-del:hover { color: #e06c6c; }
+
+	.history-footer {
+	  padding: var(--space-4);
+	  border-top: 1px solid var(--color-border);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-2);
+	}
+    .history-footer .icon-btn {
+      width: 100%;
+      min-width: 0;
+    }
+	
+    .overlay.open { opacity: 1; pointer-events: auto; }
+    .care-modal {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: var(--space-4);
+      background: rgba(0,0,0,0.54);
+      backdrop-filter: blur(4px);
+      z-index: 70;
+    }
+    .care-card {
+      width: min(560px, 100%);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+      padding: var(--space-5);
+    }
+    .care-card h3 { margin: 0 0 var(--space-2); }
+    .care-lead {
+      margin: 0 0 var(--space-2);
+      color: var(--color-text);
+      font-size: var(--text-base);
+      font-weight: 700;
+    }
+    .care-card p, .care-card ul {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .care-card ul {
+      max-height: 260px;
+      overflow: auto;
+      padding-left: 1.2rem;
+    }
+    .care-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      justify-content: flex-end;
+      margin-top: var(--space-4);
+    }
+    .care-actions .ghost-btn,
+    .care-actions .primary-btn,
+    .care-actions .danger-btn {
+      min-height: 44px;
+      border-radius: 999px;
+      padding: 0.72rem 1rem;
+    }
+    .app-version {
+      position: fixed;
+      right: 12px;
+      bottom: 8px;
+      z-index: 5;
+      color: rgba(247,244,255,0.34);
+      font-size: 0.72rem;
+      pointer-events: none;
+    }
+    .feedback-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      min-width: min(380px, calc(100vw - 32px));
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(154,167,255,0.32);
+      border-radius: 999px;
+      background:
+        linear-gradient(135deg, rgba(38,35,49,0.95), rgba(24,22,31,0.95)),
+        var(--color-surface);
+      color: var(--color-text);
+      box-shadow: 0 18px 55px rgba(0,0,0,0.45);
+      transform: translate(-50%, 22px) scale(0.96);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+    .feedback-toast.show {
+      transform: translate(-50%, 0) scale(1);
+      opacity: 1;
+    }
+    .feedback-toast-icon {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(154,167,255,0.95), rgba(255,173,205,0.95));
+      color: #14131a;
+      font-weight: 900;
+      box-shadow: 0 0 26px rgba(154,167,255,0.35);
+    }
+    @keyframes tapFlash {
+      0% { box-shadow: 0 0 0 0 rgba(154,167,255,0.42); }
+      100% { box-shadow: 0 0 0 12px rgba(154,167,255,0); }
+    }
+    @keyframes successPop {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(131,255,196,0.12); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(131,255,196,0); }
+    }
+
+    @media (max-width: 1180px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .panel { overflow: visible; }
+      .preview-panel {
+        height: min(78dvh, 760px);
+      }
+      #previewCanvas {
+        max-width: min(100%, 560px);
+        max-height: min(74dvh, 720px);
+      }
+    }
+    @media (max-width: 960px) {
+      .field-grid.two { grid-template-columns: 1fr; }
+      .settings-drawer { width: 100%; }
+    }
+    @media (max-width: 860px) {
+      .topbar { align-items: flex-start; }
+      .top-actions { width: 100%; }
+      .top-btn, .theme-toggle { flex: 0 0 auto; }
+    }
+    @media (max-width: 720px) {
+      .topbar { padding: var(--space-3); }
+      .app-shell { padding: 0 var(--space-3) var(--space-3); gap: var(--space-3); }
+      .panel, .preview-panel { padding: var(--space-3); border-radius: var(--radius-lg); }
+      .menu-head-fields { grid-template-columns: 1fr; }
+      .file-row { align-items: center; }
+      .cal-popup { left: 0; right: auto; }
+      .settings-header, .settings-body, .settings-footer { padding: var(--space-3); }
+      .settings-header { grid-template-columns: 1fr; }
+      #previewCanvas { max-width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+		<div class="brand"><img class="top-logo" id="topLogo" alt="Mad Marathon"></div>
+		<div class="top-actions">
+		  <button class="primary-btn top-btn icon-btn" id="downloadBtn" type="button" title="Сохранить меню"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
+		  <button class="ghost-btn top-btn icon-btn" id="resetBtn" type="button" title="Очистить поля"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+		  <button class="top-btn icon-btn" id="openSavedMenusBtn" type="button" title="Открыть папку сохранений"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18"/></svg></button>
+		  <button class="top-btn icon-btn" id="checkUpdatesBtn" type="button" title="Проверить обновления"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2"/><path d="M3 12a9 9 0 0 1 15.5-6.2"/><path d="M4 19v-5h5"/><path d="M20 5v5h-5"/></svg></button>
+		  <button class="top-btn icon-btn" id="openSettingsBtn" type="button" title="Настройки">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+			</svg>
+		  </button>
+			<button class="top-btn icon-btn" id="historyBtn" type="button" title="История меню"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 5v5l4 2"/></svg></button>
+		</div>
+    </header>
+    <div class="diagnostics-banner" id="diagnosticsBanner" hidden></div>
+
+    <main class="app-shell">
+      <section class="panel" aria-label="Поля меню">
+		
+		<div class="template-options" id="templateOptions" aria-label="Шаблоны меню"></div>
+
+        <div class="menu-head-fields">
+          <div class="field">
+		    <div class="daytitle-wrap">
+			  <input id="dayTitleInput" type="text" placeholder="Дата меню, например: Понедельник, 6 апреля" />
+			  <button type="button" class="cal-trigger" id="calTrigger" title="Выбрать дату"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
+			  <div class="cal-popup" id="calPopup"></div>
+		    </div>
+		  </div>
+          <div class="field">
+            <div class="tags-combobox" id="historyTagsCombobox">
+              <input id="historyTagsInput" type="text" autocomplete="off" placeholder="Метки, например: марафон, неделя 1" />
+              <button class="tags-trigger" id="historyTagsTrigger" type="button" title="Показать сохраненные метки" aria-label="Показать сохраненные метки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+              <div class="tags-menu" id="historyTagsMenu"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="blocksContainer"><section class="block-card"><h3>Завтрак</h3><div class="field"><label>Калории</label><input type="number" inputmode="numeric" placeholder="Например, 420"></div><div class="field"><label>Описание / рецепт</label><textarea placeholder="Введи описание блюда"></textarea></div><div class="field"><label>Картинка</label><div class="file-row"><input type="file" accept="image/*" class="file-input" id="file-Завтрак"><label class="file-picker-btn" for="file-Завтрак">Выбрать файл</label><div class="file-name-chip">Файл не выбран</div><button type="button" class="ghost-btn">Убрать</button></div><div class="field-help">Можно загрузить PNG, JPG, WEBP или BMP</div></div></section><section class="block-card"><h3>Обед</h3><div class="field"><label>Калории</label><input type="number" inputmode="numeric" placeholder="Например, 420"></div><div class="field"><label>Описание / рецепт</label><textarea placeholder="Введи описание блюда"></textarea></div><div class="field"><label>Картинка</label><div class="file-row"><input type="file" accept="image/*" class="file-input" id="file-Обед"><label class="file-picker-btn" for="file-Обед">Выбрать файл</label><div class="file-name-chip">Файл не выбран</div><button type="button" class="ghost-btn">Убрать</button></div><div class="field-help">Можно загрузить PNG, JPG, WEBP или BMP</div></div></section><section class="block-card"><h3>Ужин</h3><div class="field"><label>Калории</label><input type="number" inputmode="numeric" placeholder="Например, 420"></div><div class="field"><label>Описание / рецепт</label><textarea placeholder="Введи описание блюда"></textarea></div><div class="field"><label>Картинка</label><div class="file-row"><input type="file" accept="image/*" class="file-input" id="file-Ужин"><label class="file-picker-btn" for="file-Ужин">Выбрать файл</label><div class="file-name-chip">Файл не выбран</div><button type="button" class="ghost-btn">Убрать</button></div><div class="field-help">Можно загрузить PNG, JPG, WEBP или BMP</div></div></section><section class="block-card"><h3>Перекус</h3><div class="field"><label>Калории</label><input type="number" inputmode="numeric" placeholder="Например, 420"></div><div class="field"><label>Описание / рецепт</label><textarea placeholder="Введи описание блюда"></textarea></div><div class="field"><label>Картинка</label><div class="file-row"><input type="file" accept="image/*" class="file-input" id="file-Перекус"><label class="file-picker-btn" for="file-Перекус">Выбрать файл</label><div class="file-name-chip">Файл не выбран</div><button type="button" class="ghost-btn">Убрать</button></div><div class="field-help">Можно загрузить PNG, JPG, WEBP или BMP</div></div></section><section class="block-card"><h3>Дополнительно</h3><div class="field"><label>Калории</label><input type="number" inputmode="numeric" placeholder="Например, 420"></div><div class="field"><label>Описание / рецепт</label><textarea placeholder="Введи описание блюда"></textarea></div><div class="field"><label>Картинка</label><div class="file-row"><input type="file" accept="image/*" class="file-input" id="file-Дополнительно"><label class="file-picker-btn" for="file-Дополнительно">Выбрать файл</label><div class="file-name-chip">Файл не выбран</div><button type="button" class="ghost-btn">Убрать</button></div><div class="field-help">Можно загрузить PNG, JPG, WEBP или BMP</div></div></section></div>
+
+       
+        <div class="status" id="status" aria-live="polite"></div>
+      </section>
+
+      <section class="preview-panel" aria-label="Превью">
+        <div class="canvas-wrap">
+          <canvas id="previewCanvas" width="1024" height="1536" aria-label="Предпросмотр меню"></canvas>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="overlay" id="settingsOverlay"></div>
+  <div class="feedback-toast" id="feedbackToast" role="status" aria-live="polite">
+    <span class="feedback-toast-icon">✓</span>
+    <span id="feedbackToastText">Готово</span>
+  </div>
+  
+  <div class="overlay" id="historyOverlay"></div>
+
+	<aside class="history-drawer" id="historyDrawer" aria-labelledby="history-title">
+	  <div class="history-header">
+		<h2 id="history-title">История меню</h2>
+		<button class="ghost-btn icon-btn" id="closeHistoryBtn" type="button" title="Закрыть"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+	  </div>
+      <div class="history-tools">
+        <input id="historySearchInput" type="text" placeholder="Поиск по дате или метке" />
+      </div>
+	  <div class="history-body" id="historyBody">
+		<div class="history-empty">История пуста.<br>Сохрани меню — оно появится здесь.</div>
+	  </div>
+	  <div class="history-footer">
+	  <button class="primary-btn icon-btn" id="batchGenerateBtn" type="button" title="Сгенерировать все меню в ZIP"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+	  <button class="ghost-btn icon-btn" id="exportHistoryZipBtn" type="button" title="Экспорт истории ZIP"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg></button>
+	  <button class="ghost-btn icon-btn" id="restoreHistoryBtn" type="button" title="Импорт истории ZIP/JSON"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+	  <button class="ghost-btn icon-btn" id="clearHistoryBtn" type="button" title="Очистить всю историю"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+	</div>
+	</aside>
+    <div class="app-version" id="appVersion">v2.0.1</div>
+
+  <aside class="settings-drawer" id="settingsDrawer" aria-labelledby="settings-title">
+    <div class="settings-header">
+      <div>
+        <h2 id="settings-title">Настройки</h2>
+        <p class="section-note">
+          Шаблоны, файл, размеры, шрифты, цвета и координаты.
+        </p>
+      </div>
+      <button class="ghost-btn icon-btn" id="closeSettingsBtn" type="button" title="Закрыть"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+
+    <div class="settings-body">
+      <section class="settings-group">
+        <h3>Основные параметры проекта</h3>
+        <div class="field-grid two">
+          <div class="field">
+            <label for="setting-templatePath">Путь к шаблону изображения</label>
+            <input id="setting-templatePath" type="text">
+            <div class="field-help">Например: ./templates/template.png. Файл должен лежать в папке templates рядом с exe.</div>
+          </div>
+          <div class="field">
+            <label for="setting-outputName">Имя итогового файла</label>
+            <input id="setting-outputName" type="text">
+            <div class="field-help">Как будет называться PNG при скачивании.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <h3>Размеры изображений блюд</h3>
+        <div class="field-grid two">
+          <div class="field">
+            <label for="setting-imageWidth">Максимальная ширина картинки блюда</label>
+            <input id="setting-imageWidth" type="number">
+            <div class="field-help">Картинка будет уменьшаться так, чтобы влезть в эту ширину.</div>
+          </div>
+          <div class="field">
+            <label for="setting-imageHeight">Максимальная высота картинки блюда</label>
+            <input id="setting-imageHeight" type="number">
+            <div class="field-help">Если картинка выше рамки, она уменьшится до этого значения.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <h3>Текст и шрифты</h3>
+        <div class="field-grid two">
+          <div class="field">
+            <label for="setting-sizeText">Размер шрифта описания блюда</label>
+            <input id="setting-sizeText" type="number">
+            <div class="field-help">Используется для текста рецепта внутри карточки.</div>
+          </div>
+          <div class="field">
+            <label for="setting-sizeKcal">Размер шрифта калорий</label>
+            <input id="setting-sizeKcal" type="number">
+            <div class="field-help">Используется для строки вида «420 ккал».</div>
+          </div>
+          <div class="field">
+            <label for="setting-totalFontSize">Размер шрифта общей калорийности</label>
+            <input id="setting-totalFontSize" type="number">
+            <div class="field-help">Размер итоговой строки внизу шаблона.</div>
+          </div>
+          <div class="field">
+            <label for="setting-lineGap">Дополнительный межстрочный отступ текста</label>
+            <input id="setting-lineGap" type="number">
+            <div class="field-help">Чем больше значение, тем свободнее строки.</div>
+          </div>
+          <div class="field">
+            <label for="setting-fontWeight">Толщина шрифта</label>
+            <select id="setting-fontWeight">
+              <option value="400">400 — обычный</option>
+              <option value="500">500 — medium</option>
+              <option value="600">600 — semibold</option>
+              <option value="700">700 — bold</option>
+              <option value="800">800 — extra bold</option>
+            </select>
+            <div class="field-help">Толщина для описания, калорий и итоговой строки.</div>
+          </div>
+          <div class="field">
+            <label for="setting-fontFamily">Семейство шрифта canvas</label>
+            <input id="setting-fontFamily" type="text">
+            <div class="field-help">Например: Segoe UI, Arial, sans-serif.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <h3>Цвета рендера</h3>
+        <div class="field-grid two">
+          <div class="field">
+            <label for="setting-textColor">Цвет описания и калорий</label>
+            <input id="setting-textColor" type="text">
+            <div class="field-help">rgba(...), #RRGGBB или css-цвет.</div>
+          </div>
+          <div class="field">
+            <label for="setting-totalColor">Цвет итоговой строки калорийности</label>
+            <input id="setting-totalColor" type="text">
+            <div class="field-help">Отдельный цвет для нижней строки.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <h3>Дата меню</h3>
+        <div class="field-grid two">
+          <div class="field">
+            <label for="setting-dayTitleX">Позиция X подписи</label>
+            <input id="setting-dayTitleX" type="number">
+            <div class="field-help">Горизонтальная позиция Даты меню.</div>
+          </div>
+          <div class="field">
+            <label for="setting-dayTitleY">Позиция Y подписи</label>
+            <input id="setting-dayTitleY" type="number">
+            <div class="field-help">Вертикальная позиция Даты меню.</div>
+          </div>
+          <div class="field">
+            <label for="setting-dayTitleFont">Размер шрифта подписи</label>
+            <input id="setting-dayTitleFont" type="number">
+            <div class="field-help">Размер текста, например 30.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <h3>Итоговая строка калорий</h3>
+        <div class="field-grid two">
+          <div class="field">
+            <label for="setting-totalX">Позиция X итоговой строки</label>
+            <input id="setting-totalX" type="number">
+            <div class="field-help">Горизонтальное смещение текста внизу шаблона.</div>
+          </div>
+          <div class="field">
+            <label for="setting-totalY">Позиция Y итоговой строки</label>
+            <input id="setting-totalY" type="number">
+            <div class="field-help">Вертикальная позиция итоговой строки.</div>
+          </div>
+          <div class="field">
+            <label for="setting-totalPrefix">Текст перед числом общей калорийности</label>
+            <input id="setting-totalPrefix" type="text">
+            <div class="field-help">Например: «Общая калорийность на день:».</div>
+          </div>
+          <div class="field">
+            <label for="setting-kcalSuffix">Текст после калорий в блоке</label>
+            <input id="setting-kcalSuffix" type="text">
+            <div class="field-help">Например: «ккал».</div>
+          </div>
+        </div>
+      </section>
+
+      <div id="blockSettingsContainer"><section class="settings-group">
+          <h3>Завтрак</h3>
+          <div class="field-grid two">
+            <div class="field">
+              <label>X центра картинки</label>
+              <input type="number" data-path="blocks.Завтрак.imageCenter.0" value="170">
+              <div class="field-help">Центр картинки по горизонтали.</div>
+            </div>
+            <div class="field">
+              <label>Y центра картинки</label>
+              <input type="number" data-path="blocks.Завтрак.imageCenter.1" value="400">
+              <div class="field-help">Центр картинки по вертикали.</div>
+            </div>
+            <div class="field">
+              <label>X начала текстового блока</label>
+              <input type="number" data-path="blocks.Завтрак.textBox.0" value="340">
+              <div class="field-help">Левая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y начала текстового блока</label>
+              <input type="number" data-path="blocks.Завтрак.textBox.1" value="300">
+              <div class="field-help">Верхняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X конца текстового блока</label>
+              <input type="number" data-path="blocks.Завтрак.textBox.2" value="1000">
+              <div class="field-help">Правая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y конца текстового блока</label>
+              <input type="number" data-path="blocks.Завтрак.textBox.3" value="500">
+              <div class="field-help">Нижняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X позиции калорий</label>
+              <input type="number" data-path="blocks.Завтрак.kcalPos.0" value="50">
+              <div class="field-help">Горизонтальная позиция строки калорий.</div>
+            </div>
+            <div class="field">
+              <label>Y позиции калорий</label>
+              <input type="number" data-path="blocks.Завтрак.kcalPos.1" value="290">
+              <div class="field-help">Вертикальная позиция строки калорий.</div>
+            </div>
+          </div>
+        </section><section class="settings-group">
+          <h3>Обед</h3>
+          <div class="field-grid two">
+            <div class="field">
+              <label>X центра картинки</label>
+              <input type="number" data-path="blocks.Обед.imageCenter.0" value="170">
+              <div class="field-help">Центр картинки по горизонтали.</div>
+            </div>
+            <div class="field">
+              <label>Y центра картинки</label>
+              <input type="number" data-path="blocks.Обед.imageCenter.1" value="651">
+              <div class="field-help">Центр картинки по вертикали.</div>
+            </div>
+            <div class="field">
+              <label>X начала текстового блока</label>
+              <input type="number" data-path="blocks.Обед.textBox.0" value="340">
+              <div class="field-help">Левая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y начала текстового блока</label>
+              <input type="number" data-path="blocks.Обед.textBox.1" value="585">
+              <div class="field-help">Верхняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X конца текстового блока</label>
+              <input type="number" data-path="blocks.Обед.textBox.2" value="1000">
+              <div class="field-help">Правая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y конца текстового блока</label>
+              <input type="number" data-path="blocks.Обед.textBox.3" value="790">
+              <div class="field-help">Нижняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X позиции калорий</label>
+              <input type="number" data-path="blocks.Обед.kcalPos.0" value="50">
+              <div class="field-help">Горизонтальная позиция строки калорий.</div>
+            </div>
+            <div class="field">
+              <label>Y позиции калорий</label>
+              <input type="number" data-path="blocks.Обед.kcalPos.1" value="575">
+              <div class="field-help">Вертикальная позиция строки калорий.</div>
+            </div>
+          </div>
+        </section><section class="settings-group">
+          <h3>Ужин</h3>
+          <div class="field-grid two">
+            <div class="field">
+              <label>X центра картинки</label>
+              <input type="number" data-path="blocks.Ужин.imageCenter.0" value="170">
+              <div class="field-help">Центр картинки по горизонтали.</div>
+            </div>
+            <div class="field">
+              <label>Y центра картинки</label>
+              <input type="number" data-path="blocks.Ужин.imageCenter.1" value="891">
+              <div class="field-help">Центр картинки по вертикали.</div>
+            </div>
+            <div class="field">
+              <label>X начала текстового блока</label>
+              <input type="number" data-path="blocks.Ужин.textBox.0" value="340">
+              <div class="field-help">Левая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y начала текстового блока</label>
+              <input type="number" data-path="blocks.Ужин.textBox.1" value="830">
+              <div class="field-help">Верхняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X конца текстового блока</label>
+              <input type="number" data-path="blocks.Ужин.textBox.2" value="1000">
+              <div class="field-help">Правая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y конца текстового блока</label>
+              <input type="number" data-path="blocks.Ужин.textBox.3" value="1030">
+              <div class="field-help">Нижняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X позиции калорий</label>
+              <input type="number" data-path="blocks.Ужин.kcalPos.0" value="50">
+              <div class="field-help">Горизонтальная позиция строки калорий.</div>
+            </div>
+            <div class="field">
+              <label>Y позиции калорий</label>
+              <input type="number" data-path="blocks.Ужин.kcalPos.1" value="815">
+              <div class="field-help">Вертикальная позиция строки калорий.</div>
+            </div>
+          </div>
+        </section><section class="settings-group">
+          <h3>Перекус</h3>
+          <div class="field-grid two">
+            <div class="field">
+              <label>X центра картинки</label>
+              <input type="number" data-path="blocks.Перекус.imageCenter.0" value="170">
+              <div class="field-help">Центр картинки по горизонтали.</div>
+            </div>
+            <div class="field">
+              <label>Y центра картинки</label>
+              <input type="number" data-path="blocks.Перекус.imageCenter.1" value="1131">
+              <div class="field-help">Центр картинки по вертикали.</div>
+            </div>
+            <div class="field">
+              <label>X начала текстового блока</label>
+              <input type="number" data-path="blocks.Перекус.textBox.0" value="340">
+              <div class="field-help">Левая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y начала текстового блока</label>
+              <input type="number" data-path="blocks.Перекус.textBox.1" value="1073">
+              <div class="field-help">Верхняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X конца текстового блока</label>
+              <input type="number" data-path="blocks.Перекус.textBox.2" value="1000">
+              <div class="field-help">Правая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y конца текстового блока</label>
+              <input type="number" data-path="blocks.Перекус.textBox.3" value="1210">
+              <div class="field-help">Нижняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X позиции калорий</label>
+              <input type="number" data-path="blocks.Перекус.kcalPos.0" value="50">
+              <div class="field-help">Горизонтальная позиция строки калорий.</div>
+            </div>
+            <div class="field">
+              <label>Y позиции калорий</label>
+              <input type="number" data-path="blocks.Перекус.kcalPos.1" value="1053">
+              <div class="field-help">Вертикальная позиция строки калорий.</div>
+            </div>
+          </div>
+        </section><section class="settings-group">
+          <h3>Дополнительно</h3>
+          <div class="field-grid two">
+            <div class="field">
+              <label>X центра картинки</label>
+              <input type="number" data-path="blocks.Дополнительно.imageCenter.0" value="170">
+              <div class="field-help">Центр картинки по горизонтали.</div>
+            </div>
+            <div class="field">
+              <label>Y центра картинки</label>
+              <input type="number" data-path="blocks.Дополнительно.imageCenter.1" value="1400">
+              <div class="field-help">Центр картинки по вертикали.</div>
+            </div>
+            <div class="field">
+              <label>X начала текстового блока</label>
+              <input type="number" data-path="blocks.Дополнительно.textBox.0" value="340">
+              <div class="field-help">Левая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y начала текстового блока</label>
+              <input type="number" data-path="blocks.Дополнительно.textBox.1" value="1335">
+              <div class="field-help">Верхняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X конца текстового блока</label>
+              <input type="number" data-path="blocks.Дополнительно.textBox.2" value="1000">
+              <div class="field-help">Правая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y конца текстового блока</label>
+              <input type="number" data-path="blocks.Дополнительно.textBox.3" value="1460">
+              <div class="field-help">Нижняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X позиции калорий</label>
+              <input type="number" data-path="blocks.Дополнительно.kcalPos.0" value="50">
+              <div class="field-help">Горизонтальная позиция строки калорий.</div>
+            </div>
+            <div class="field">
+              <label>Y позиции калорий</label>
+              <input type="number" data-path="blocks.Дополнительно.kcalPos.1" value="1310">
+              <div class="field-help">Вертикальная позиция строки калорий.</div>
+            </div>
+          </div>
+        </section></div>
+    </div>
+
+    <div class="settings-footer">
+      <button class="ghost-btn icon-btn" id="saveSettingsBtn" type="button" title="Сохранить настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
+      <button class="ghost-btn icon-btn" id="loadSettingsBtn" type="button" title="Загрузить настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+      <button class="ghost-btn icon-btn" id="exportSettingsBtn" type="button" title="Экспорт JSON"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg></button>
+      <button class="primary-btn icon-btn" id="applySettingsBtn" type="button" title="Применить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+    </div>
+  </aside>
+
+  <script src="./vendor/jszip.min.js"></script>
+  <script>
+    const DEFAULT_CONFIG = {
+	  image: {
+		templatePath: './templates/Обычное меню.png',
+		templatePath2: './templates/День Х.png',
+		templatePath3: './templates/Для рецептов.png',
+		outputName: 'menu_output.png',
+		size: [500, 500]
+	  },
+
+	  font: {
+		sizeText: 50,
+		sizeKcal: 60,
+		totalFontSize: 60,
+		family: 'Segoe UI, sans-serif',
+		weight: '700',
+		lineGap: 8
+	  },
+
+	  render: {
+		textColor: 'rgba(172, 144, 78, 255)',
+		totalPrefix: 'Общая калорийность на день:',
+		kcalSuffix: 'ккал'
+	  },
+
+	  dayTitle: {
+		text: '',
+		pos: [1320, 50],
+		fontSize: 60
+	  },
+
+	  blocks: {
+		'Завтрак': { imageCenter: [300, 700], textBox: [600, 580, 2400, 500], kcalPos: [50, 480] },
+		'Обед': { imageCenter: [300, 1200], textBox: [600, 1085, 2400, 790], kcalPos: [50, 990] },
+		'Ужин': { imageCenter: [300, 1720], textBox: [600, 1600, 2400, 1020], kcalPos: [50, 1500] },
+		'Перекус': { imageCenter: [300, 2220], textBox: [600, 2100, 2400, 1210], kcalPos: [50, 2000] },
+		'Ночной дожор': { imageCenter: [300, 2730], textBox: [600, 2620, 2400, 1340], kcalPos: [50, 2500] },
+		'Дополнительно': { imageCenter: [300, 3260], textBox: [600, 3150, 2400, 1460], kcalPos: [50, 3010] }
+	  },
+
+	  totalKcal: {
+		pos: [1320, 120],
+		color: 'rgba(172, 144, 78, 255)'
+	  }
+	};
+
+    const SETTINGS_KEY = 'mad-marathon-menu-settings-v2';
+    const HISTORY_KEY = 'mad-marathon-menu-history-v1';
+    const DRAFT_KEY = 'mad-marathon-menu-draft-v2';
+    const APP_VERSION = '2.0.1';
+	const desktopBridge = window.desktopAPI || null;
+    const CONFIG = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+	let currentMenuType = 'default';
+    let templatesCache = [];
+    let currentTemplatePath = CONFIG.image.templatePath;
+    let draftSaveTimer = null;
+    let isRestoringDraft = false;
+	
+    const state = {};
+	let historyCache = [];
+    let renderSequence = 0;
+
+    const blocksContainer = document.getElementById('blocksContainer');
+    const blockSettingsContainer = document.getElementById('blockSettingsContainer');
+    const templateOptions = document.getElementById('templateOptions');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const ctx = previewCanvas.getContext('2d');
+    const statusEl = document.getElementById('status');
+    const topLogo = document.getElementById('topLogo');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const openSavedMenusBtn = document.getElementById('openSavedMenusBtn');
+    const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
+    const historyTagsInput = document.getElementById('historyTagsInput');
+    const historyTagsMenu = document.getElementById('historyTagsMenu');
+    const historyTagsTrigger = document.getElementById('historyTagsTrigger');
+    const historySearchInput = document.getElementById('historySearchInput');
+    const diagnosticsBanner = document.getElementById('diagnosticsBanner');
+    const appVersionEl = document.getElementById('appVersion');
+    const feedbackToast = document.getElementById('feedbackToast');
+    const feedbackToastText = document.getElementById('feedbackToastText');
+	const historyBtn = document.getElementById('historyBtn');
+	const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+	const historyDrawer = document.getElementById('historyDrawer');
+	const historyOverlay = document.getElementById('historyOverlay');
+
+	historyBtn.addEventListener('click', () => {
+	  historyDrawer.classList.add('open');
+	  historyOverlay.classList.add('open');
+	  if (typeof renderHistory === 'function') {
+		renderHistory();        // ← уже есть
+	  }
+	  
+	  // Добавь эту строку:
+	  console.log('История открыта, кнопка очистки готова');
+	});
+	
+	
+	
+    if (historySearchInput) {
+      historySearchInput.addEventListener('input', () => renderHistory());
+    }
+
+	closeHistoryBtn.addEventListener('click', () => {
+	  historyDrawer.classList.remove('open');
+	  historyOverlay.classList.remove('open');
+	});
+
+	historyOverlay.addEventListener('click', () => {
+	  historyDrawer.classList.remove('open');
+	  historyOverlay.classList.remove('open');
+	});
+
+	// =============================================
+	// КНОПКА «СОХРАНИТЬ МЕНЮ» — ИСПРАВЛЕНО
+	// =============================================
+
+	downloadBtn.addEventListener('click', async () => {
+	  try {
+        const warnings = collectCareWarnings();
+        if (warnings.length && !(await confirmCareSave(warnings))) return;
+		await renderPreview();
+		const fileName = CONFIG.image.outputName || 'menu_output.png';
+		await savePngLocal(previewCanvas.toDataURL('image/png'), fileName);
+
+		const history = loadHistory();
+		const newItem = {
+		  date: CONFIG.dayTitle.text || 'Без даты',
+          tags: getCurrentTags(),
+          templatePath: currentTemplatePath,
+          templateName: getCurrentTemplate()?.name || '',
+		  state: serializeMenuState(),
+		  config: JSON.parse(JSON.stringify(CONFIG)),
+		  createdAt: Date.now()
+		};
+
+		history.push(newItem);
+		await saveHistory(history);
+
+		if (typeof renderHistory === 'function') {
+		  renderHistory();
+		}
+
+        await resetForm({ silent: true });
+        flashActionButton(downloadBtn, 'success');
+        showFeedback('Меню сохранено, поля очищены', '✓');
+		setStatus('Меню сохранено и добавлено в историю');
+	  } catch (e) {
+		console.error('Ошибка сохранения меню:', e);
+		setStatus('Не удалось сохранить меню');
+        showFeedback('Не удалось сохранить меню', '!');
+	  }
+	});
+	
+    const resetBtn = document.getElementById('resetBtn');
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const dayTitleInput = document.getElementById('dayTitleInput');
+
+    if (historyTagsInput) {
+      historyTagsInput.addEventListener('input', () => {
+        scheduleDraftSave();
+        if (historyTagsMenu?.classList.contains('open')) refreshTagSuggestions();
+      });
+      historyTagsInput.addEventListener('focus', openTagsMenu);
+    }
+    historyTagsTrigger?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openTagsMenu();
+      historyTagsInput?.focus();
+    });
+    historyTagsMenu?.addEventListener('click', (event) => {
+      const option = event.target.closest('.tag-suggestion');
+      if (!option) return;
+      selectHistoryTag(option.dataset.tag || option.textContent.trim());
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#historyTagsCombobox')) closeTagsMenu();
+    });
+    document.addEventListener('click', (event) => {
+      const target = event.target.closest('button, .file-picker-btn');
+      if (!target) return;
+      target.classList.remove('is-tapped');
+      void target.offsetWidth;
+      target.classList.add('is-tapped');
+      setTimeout(() => target.classList.remove('is-tapped'), 340);
+    });
+    openSavedMenusBtn?.addEventListener('click', async () => {
+      if (!desktopBridge || typeof desktopBridge.openSavedMenusFolder !== 'function') {
+        showFeedback('Папка сохранений доступна только в desktop-версии', '!');
+        return;
+      }
+      const result = await desktopBridge.openSavedMenusFolder();
+      showFeedback(result?.ok ? 'Открываю папку сохраненных меню' : 'Не удалось открыть папку', result?.ok ? '↗' : '!');
+    });
+    checkUpdatesBtn?.addEventListener('click', async () => {
+      if (!desktopBridge || typeof desktopBridge.checkUpdates !== 'function') {
+        await showUpdateModal({ configured: false, currentVersion: APP_VERSION, message: 'Проверка обновлений доступна только в desktop-версии.' });
+        return;
+      }
+      showFeedback('Проверяю обновления...', '↻');
+      const result = await desktopBridge.checkUpdates();
+      await showUpdateModal(result);
+    });
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const settingsDrawer = document.getElementById('settingsDrawer');
+    const settingsOverlay = document.getElementById('settingsOverlay');
+    const applySettingsBtn = document.getElementById('applySettingsBtn');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const loadSettingsBtn = document.getElementById('loadSettingsBtn');
+    const exportSettingsBtn = document.getElementById('exportSettingsBtn');
+    const templateImage = new Image();
+	
+	// =============================================
+	// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+	// =============================================
+
+	function setStatus(text) {
+	  const statusEl = document.getElementById('status');
+	  if (statusEl) {
+		statusEl.textContent = text;
+	  } else {
+		console.log('Status:', text);
+	  }
+	}
+
+	function resolveAssetPath(assetPath) {
+	  if (desktopBridge && typeof desktopBridge.assetUrl === 'function') {
+		return desktopBridge.assetUrl(assetPath);
+	  }
+	  return assetPath;
+	}
+
+    if (topLogo) {
+      topLogo.src = resolveAssetPath('./templates/logo.png');
+    }
+    applyCustomTooltips();
+
+    function parseTags(value) {
+      return String(value || '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .slice(0, 12);
+    }
+
+    function setTags(tags) {
+      if (historyTagsInput) historyTagsInput.value = Array.isArray(tags) ? tags.join(', ') : '';
+    }
+
+    function getCurrentTags() {
+      return parseTags(historyTagsInput?.value || '');
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function getKnownTags() {
+      const uniqueTags = new Map();
+      historyCache.forEach((item) => {
+        (Array.isArray(item.tags) ? item.tags : []).forEach((tag) => {
+          const cleanTag = String(tag || '').trim();
+          if (cleanTag) uniqueTags.set(cleanTag.toLowerCase(), cleanTag);
+        });
+      });
+      return Array.from(uniqueTags.values()).sort((a, b) => a.localeCompare(b, 'ru'));
+    }
+
+    function getCurrentTagFragment() {
+      const value = historyTagsInput?.value || '';
+      return value.split(',').pop().trim().toLowerCase();
+    }
+
+    function refreshTagSuggestions() {
+      if (!historyTagsMenu) return;
+      const fragment = getCurrentTagFragment();
+      const tags = getKnownTags().filter((tag) => !fragment || tag.toLowerCase().includes(fragment));
+      if (!tags.length) {
+        historyTagsMenu.innerHTML = '<div class="tag-suggestion-empty">Сохраненных меток пока нет</div>';
+        return;
+      }
+      historyTagsMenu.innerHTML = tags
+        .map((tag) => `<button class="tag-suggestion" type="button" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`)
+        .join('');
+    }
+
+    function openTagsMenu() {
+      if (!historyTagsMenu) return;
+      refreshTagSuggestions();
+      historyTagsMenu.classList.add('open');
+      historyTagsTrigger?.classList.add('open');
+    }
+
+    function closeTagsMenu() {
+      historyTagsMenu?.classList.remove('open');
+      historyTagsTrigger?.classList.remove('open');
+    }
+
+    function selectHistoryTag(tag) {
+      const tags = getCurrentTags();
+      if (!tags.some((existing) => existing.toLowerCase() === tag.toLowerCase())) {
+        tags.push(tag);
+      }
+      setTags(tags);
+      scheduleDraftSave();
+      closeTagsMenu();
+      historyTagsInput?.focus();
+    }
+
+    let feedbackTimer = null;
+    function showFeedback(message, icon = '✓') {
+      if (!feedbackToast || !feedbackToastText) return;
+      feedbackToastText.textContent = message;
+      const iconEl = feedbackToast.querySelector('.feedback-toast-icon');
+      if (iconEl) iconEl.textContent = icon;
+      feedbackToast.classList.add('show');
+      clearTimeout(feedbackTimer);
+      feedbackTimer = setTimeout(() => feedbackToast.classList.remove('show'), 2200);
+    }
+
+    function flashActionButton(button, type = 'success') {
+      if (!button) return;
+      button.classList.remove('is-success');
+      void button.offsetWidth;
+      if (type === 'success') button.classList.add('is-success');
+      setTimeout(() => button.classList.remove('is-success'), 760);
+    }
+
+    function applyCustomTooltips(root = document) {
+      root.querySelectorAll('[title]').forEach((element) => {
+        const text = element.getAttribute('title');
+        if (!text) return;
+        element.dataset.tooltip = text;
+        if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', text);
+        element.removeAttribute('title');
+      });
+    }
+
+    function captureScrollState() {
+      const panel = document.querySelector('.panel');
+      const shell = document.querySelector('.app-shell');
+      return {
+        windowX: window.scrollX || 0,
+        windowY: window.scrollY || 0,
+        bodyTop: document.body.scrollTop || 0,
+        docTop: document.documentElement.scrollTop || 0,
+        shellTop: shell?.scrollTop || 0,
+        shellLeft: shell?.scrollLeft || 0,
+        panelTop: panel?.scrollTop || 0,
+        panelLeft: panel?.scrollLeft || 0
+      };
+    }
+
+    function restoreScrollState(snapshot) {
+      if (!snapshot) return;
+      const panel = document.querySelector('.panel');
+      const shell = document.querySelector('.app-shell');
+      window.scrollTo(snapshot.windowX, snapshot.windowY);
+      document.body.scrollTop = snapshot.bodyTop;
+      document.documentElement.scrollTop = snapshot.docTop;
+      if (shell) {
+        shell.scrollTop = snapshot.shellTop;
+        shell.scrollLeft = snapshot.shellLeft;
+      }
+      if (panel) {
+        panel.scrollTop = snapshot.panelTop;
+        panel.scrollLeft = snapshot.panelLeft;
+      }
+    }
+
+    function restoreScrollStateSoon(snapshot) {
+      restoreScrollState(snapshot);
+      requestAnimationFrame(() => {
+        restoreScrollState(snapshot);
+        setTimeout(() => restoreScrollState(snapshot), 80);
+      });
+    }
+
+    function serializeDraft() {
+      return {
+        date: CONFIG.dayTitle.text || '',
+        tags: getCurrentTags(),
+        templatePath: currentTemplatePath,
+        templateName: getCurrentTemplate()?.name || '',
+        state: serializeMenuState(),
+        config: JSON.parse(JSON.stringify(CONFIG)),
+        updatedAt: Date.now()
+      };
+    }
+
+    function scheduleDraftSave() {
+      if (isRestoringDraft) return;
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(() => saveDraftNow(), 450);
+    }
+
+    async function saveDraftNow() {
+      const draft = serializeDraft();
+      if (desktopBridge && typeof desktopBridge.saveDraft === 'function') {
+        await desktopBridge.saveDraft(draft);
+      } else {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      }
+    }
+
+    async function loadDraftInitial() {
+      if (desktopBridge && typeof desktopBridge.loadDraft === 'function') {
+        return desktopBridge.loadDraft();
+      }
+      return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    }
+
+    async function clearDraft() {
+      clearTimeout(draftSaveTimer);
+      if (desktopBridge && typeof desktopBridge.clearDraft === 'function') {
+        await desktopBridge.clearDraft();
+      } else {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
+
+    async function loadTemplatesInitial() {
+      if (desktopBridge && typeof desktopBridge.listTemplates === 'function') {
+        templatesCache = await desktopBridge.listTemplates();
+      }
+
+      if (!Array.isArray(templatesCache) || !templatesCache.length) {
+        templatesCache = [
+          { id: 'default', name: 'Обычное меню', path: './templates/Обычное меню.png' },
+          { id: 'dayx', name: 'День Х', path: './templates/День Х.png' },
+          { id: 'recipes', name: 'Для рецептов', path: './templates/Для рецептов.png' }
+        ];
+      }
+
+      currentTemplatePath = templatesCache[0]?.path || CONFIG.image.templatePath;
+      CONFIG.image.templatePath = currentTemplatePath;
+      renderTemplateOptions();
+    }
+
+    function getCurrentTemplate() {
+      return templatesCache.find((template) => template.path === currentTemplatePath) || templatesCache[0] || null;
+    }
+
+    function renderTemplateOptions() {
+      if (!templateOptions) return;
+      templateOptions.innerHTML = '';
+
+      templatesCache.forEach((template, index) => {
+        const label = document.createElement('label');
+        label.className = 'template-option';
+        label.dataset.tooltip = template.path;
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'menuType';
+        input.value = template.path;
+        input.checked = template.path === currentTemplatePath || (!currentTemplatePath && index === 0);
+        input.addEventListener('change', () => {
+          currentMenuType = template.id || template.path;
+          currentTemplatePath = template.path;
+          CONFIG.image.templatePath = template.path;
+          updateTemplateSource();
+          renderPreview();
+          scheduleDraftSave();
+        });
+        label.append(input, document.createTextNode(template.name));
+        templateOptions.append(label);
+      });
+    }
+
+    async function runDiagnostics() {
+      if (appVersionEl) appVersionEl.textContent = `v${APP_VERSION}`;
+
+      if (!desktopBridge || typeof desktopBridge.checkDiagnostics !== 'function') return;
+      const result = await desktopBridge.checkDiagnostics();
+      if (appVersionEl && result?.version) appVersionEl.textContent = `v${result.version}`;
+
+      if (diagnosticsBanner && result?.warnings?.length) {
+        diagnosticsBanner.hidden = false;
+        diagnosticsBanner.textContent = `Проверь папки продукта: ${result.warnings.join('; ')}`;
+      }
+    }
+
+	function serializeMenuState() {
+	  const cleanState = {};
+	  Object.keys(CONFIG.blocks).forEach((name) => {
+		const block = state[name] || {};
+		cleanState[name] = {
+		  kcal: block.kcal || '',
+		  text: block.text || '',
+		  base64: block.base64 || ''
+		};
+	  });
+	  return cleanState;
+	}
+
+	function loadHistory() {
+	  return historyCache.slice();
+	}
+
+	async function saveHistory(list) {
+	  historyCache = Array.isArray(list) ? list : [];
+	  if (desktopBridge && typeof desktopBridge.saveHistory === 'function') {
+		const saved = await desktopBridge.saveHistory(historyCache);
+		if (Array.isArray(saved)) {
+		  historyCache = saved;
+		}
+        refreshTagSuggestions();
+		return;
+	  }
+	  localStorage.setItem(HISTORY_KEY, JSON.stringify(historyCache));
+      refreshTagSuggestions();
+	}
+
+	async function loadHistoryInitial() {
+	  if (desktopBridge && typeof desktopBridge.loadHistory === 'function') {
+		historyCache = await desktopBridge.loadHistory();
+        refreshTagSuggestions();
+		return;
+	  }
+	  historyCache = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      refreshTagSuggestions();
+	}
+
+	async function clearHistoryWithBackup() {
+	  if (desktopBridge && typeof desktopBridge.clearHistory === 'function') {
+		const result = await desktopBridge.clearHistory();
+		historyCache = [];
+        refreshTagSuggestions();
+		return result;
+	  }
+
+	  const backup = loadHistory();
+	  localStorage.setItem(`${HISTORY_KEY}-backup-${Date.now()}`, JSON.stringify(backup));
+	  historyCache = [];
+	  localStorage.setItem(HISTORY_KEY, '[]');
+      refreshTagSuggestions();
+	  return {};
+	}
+
+	async function importHistoryFromJson() {
+      if (desktopBridge && typeof desktopBridge.importHistoryZip === 'function') {
+        const result = await desktopBridge.importHistoryZip();
+        if (result?.canceled) return false;
+        historyCache = Array.isArray(result.history) ? result.history : [];
+        refreshTagSuggestions();
+        return true;
+      }
+	  if (desktopBridge && typeof desktopBridge.importHistory === 'function') {
+		const result = await desktopBridge.importHistory();
+		if (result?.canceled) return false;
+		historyCache = Array.isArray(result.history) ? result.history : [];
+        refreshTagSuggestions();
+		return true;
+	  }
+
+	  return new Promise((resolve) => {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = 'application/json,.json';
+		input.addEventListener('change', () => {
+		  const file = input.files?.[0];
+		  if (!file) {
+			resolve(false);
+			return;
+		  }
+		  const reader = new FileReader();
+		  reader.onload = async () => {
+			try {
+			  const imported = JSON.parse(reader.result);
+			  await saveHistory(imported);
+			  resolve(true);
+			} catch (_) {
+			  resolve(false);
+			}
+		  };
+		  reader.readAsText(file, 'utf-8');
+		});
+		input.click();
+	  });
+	}
+
+    async function exportHistoryZip() {
+      if (desktopBridge && typeof desktopBridge.exportHistoryZip === 'function') {
+        const result = await desktopBridge.exportHistoryZip();
+        if (result?.canceled) return false;
+        setStatus(`История экспортирована: ${result.filePath}`);
+        return true;
+      }
+      setStatus('Экспорт ZIP доступен только в desktop-версии.');
+      return false;
+    }
+
+	async function savePngLocal(dataUrl, fileName) {
+	  if (desktopBridge && typeof desktopBridge.saveImage === 'function') {
+		return desktopBridge.saveImage(dataUrl, fileName);
+	  }
+	  const link = document.createElement('a');
+	  link.download = fileName || 'menu_output.png';
+	  link.href = dataUrl;
+	  link.click();
+	  return { filePath: link.download };
+	}
+
+    function collectCareWarnings() {
+      const warnings = [];
+      const templateName = String(getCurrentTemplate()?.name || currentTemplatePath || '').toLowerCase();
+      if (templateName.includes('рецепт')) return warnings;
+      if (!String(CONFIG.dayTitle.text || '').trim()) warnings.push('Не заполнена дата меню.');
+      if (!currentTemplatePath) warnings.push('Не выбран шаблон.');
+
+      const ignoredBlocks = new Set();
+      if (templateName.includes('день') && templateName.includes('х')) {
+        ignoredBlocks.add('Ночной дожор');
+        ignoredBlocks.add('Дополнительно');
+      }
+
+      Object.keys(CONFIG.blocks).filter((name) => !ignoredBlocks.has(name)).forEach((name) => {
+        const block = state[name] || {};
+        const missing = [];
+        if (!String(block.kcal || '').trim()) missing.push('калории');
+        if (!String(block.text || '').trim()) missing.push('описание');
+        if (!block.base64 && !block.objectUrl) missing.push('картинка');
+        if (missing.length) warnings.push(`${name}: ${missing.join(', ')}`);
+      });
+
+      return warnings;
+    }
+
+    function confirmCareSave(warnings) {
+      return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'care-modal';
+        modal.innerHTML = `
+          <div class="care-card" role="dialog" aria-modal="true">
+            <h3>Режим заботы</h3>
+            <p>Я заметил незаполненные поля. Можно вернуться и дописать, а можно сохранить меню как есть.</p>
+            <ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul>
+            <div class="care-actions">
+              <button class="ghost-btn" type="button" data-care="cancel">Вернуться</button>
+              <button class="primary-btn" type="button" data-care="save">Сохранить как есть</button>
+            </div>
+          </div>
+        `;
+        document.body.append(modal);
+        modal.querySelector('[data-care="cancel"]').addEventListener('click', () => {
+          modal.remove();
+          resolve(false);
+        });
+        modal.querySelector('[data-care="save"]').addEventListener('click', () => {
+          modal.remove();
+          resolve(true);
+        });
+      });
+    }
+
+    function confirmDesignModal({ title, message, details = '', confirmText = 'Ок', cancelText = 'Отмена', danger = false }) {
+      return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'care-modal';
+        modal.innerHTML = `
+          <div class="care-card" role="dialog" aria-modal="true">
+            <h3>Режим заботы</h3>
+            <p class="care-lead">${escapeHtml(title)}</p>
+            <p>${escapeHtml(message)}</p>
+            ${details ? `<p>${escapeHtml(details)}</p>` : ''}
+            <div class="care-actions">
+              <button class="ghost-btn" type="button" data-dialog="cancel">${escapeHtml(cancelText)}</button>
+              <button class="${danger ? 'danger-btn' : 'primary-btn'}" type="button" data-dialog="confirm">${escapeHtml(confirmText)}</button>
+            </div>
+          </div>
+        `;
+        document.body.append(modal);
+        const close = (value) => {
+          modal.remove();
+          resolve(value);
+        };
+        modal.querySelector('[data-dialog="cancel"]').addEventListener('click', () => close(false));
+        modal.querySelector('[data-dialog="confirm"]').addEventListener('click', () => close(true));
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) close(false);
+        });
+      });
+    }
+
+    function showUpdateModal(result) {
+      return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'care-modal';
+        const currentVersion = escapeHtml(result?.currentVersion || APP_VERSION);
+        const latestVersion = escapeHtml(result?.latestVersion || 'неизвестно');
+        const hasUpdate = Boolean(result?.updateAvailable && result?.downloadUrl);
+        const lead = result?.configured === false
+          ? 'Источник обновлений не настроен'
+          : result?.error
+            ? 'Проверка обновлений не удалась'
+            : result?.updateAvailable
+              ? 'Доступна новая версия'
+              : 'У вас актуальная версия';
+        const message = result?.error
+          ? `Не удалось проверить обновления: ${result.error}`
+          : result?.configured === false
+            ? result.message
+            : `Текущая версия: ${currentVersion}. Версия в гите: ${latestVersion}.`;
+        modal.innerHTML = `
+          <div class="care-card" role="dialog" aria-modal="true">
+            <h3>Режим заботы</h3>
+            <p class="care-lead">${escapeHtml(lead)}</p>
+            <p>${message}</p>
+            ${result?.notes ? `<p>${escapeHtml(String(result.notes).slice(0, 260))}</p>` : ''}
+            <div class="care-actions">
+              <button class="ghost-btn" type="button" data-update="close">Закрыть</button>
+              ${hasUpdate ? '<button class="primary-btn" type="button" data-update="install">Обновить и перезапустить</button>' : ''}
+            </div>
+          </div>
+        `;
+        document.body.append(modal);
+        modal.querySelector('[data-update="close"]').addEventListener('click', () => {
+          modal.remove();
+          resolve(false);
+        });
+        modal.querySelector('[data-update="install"]')?.addEventListener('click', async (event) => {
+          const button = event.currentTarget;
+          button.disabled = true;
+          button.textContent = 'Обновляем...';
+          showFeedback('Скачиваю обновление и готовлю перезапуск...', '↻');
+
+          try {
+            if (desktopBridge && typeof desktopBridge.installUpdate === 'function') {
+              await desktopBridge.installUpdate(result);
+            }
+            resolve(true);
+          } catch (error) {
+            button.disabled = false;
+            button.textContent = 'Обновить и перезапустить';
+            showFeedback(error?.message || 'Не удалось установить обновление', '!');
+          }
+        });
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) {
+            modal.remove();
+            resolve(false);
+          }
+        });
+      });
+    }
+
+	function compressImagePNG(file, maxSize = 500) {
+	  return new Promise((resolve) => {
+		const img = new Image();
+		const reader = new FileReader();
+
+		reader.onload = (e) => {
+		  img.src = e.target.result;
+		};
+
+		img.onload = () => {
+		  const canvas = document.createElement('canvas');
+		  const ctx = canvas.getContext('2d');
+
+		  let width = img.width;
+		  let height = img.height;
+
+		  const scale = Math.min(maxSize / width, maxSize / height);
+		  width = Math.round(width * scale);
+		  height = Math.round(height * scale);
+
+		  canvas.width = width;
+		  canvas.height = height;
+
+		  ctx.drawImage(img, 0, 0, width, height);
+
+		  // ВАЖНО: PNG (с прозрачностью)
+		  const base64 = canvas.toDataURL('image/png');
+
+		  resolve(base64);
+		};
+
+		reader.readAsDataURL(file);
+	  });
+	}
+	
+	templateImage.onload = () => {
+	  renderPreview();
+	};
+
+	templateImage.onerror = () => {
+	  setStatus('Ошибка загрузки template.png');
+	};
+
+	function renderHistory() {
+	  const container = document.getElementById('historyBody');
+	  if (!container) return;
+
+	  const query = String(historySearchInput?.value || '').trim().toLowerCase();
+	  const history = loadHistory().filter((item) => {
+        if (!query) return true;
+        const tags = Array.isArray(item.tags) ? item.tags.join(' ') : '';
+        return `${item.date || ''} ${tags}`.toLowerCase().includes(query);
+      });
+
+	  if (!history.length) {
+        const message = query
+          ? 'По вашему запросу мы ничего не нашли.'
+          : 'История пуста.<br>Сохрани меню — оно появится здесь.';
+		container.innerHTML = `<div class="history-empty">${message}</div>`;
+		return;
+	  }
+
+	  container.innerHTML = '';
+
+	  history.slice().reverse().forEach((item) => {
+		const div = document.createElement('div');
+		div.className = 'history-item';
+		const dateStr = new Date(item.createdAt).toLocaleString('ru-RU');
+        const tags = Array.isArray(item.tags) ? item.tags : [];
+
+		div.innerHTML = `
+		  <div class="history-item-info">
+			<div class="history-item-date">${escapeHtml(item.date || 'Без названия')}</div>
+			<div class="history-item-meta">${dateStr}</div>
+            ${tags.length ? `<div class="history-tags">${tags.map((tag) => `<span class="history-tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+		  </div>
+		  <button class="history-item-del">✕</button>
+		`;
+
+		// Клик по карточке (кроме кнопки удаления)
+		div.addEventListener('click', (e) => {
+		  if (e.target.closest('.history-item-del')) return;
+		  loadFromHistory(item);
+		});
+
+		// Клик по кнопке удаления
+		div.querySelector('.history-item-del').addEventListener('click', async (e) => {
+		  e.stopPropagation();
+		  const list = loadHistory();
+          const sourceIndex = list.findIndex((entry) => entry.id === item.id || entry.createdAt === item.createdAt);
+          if (sourceIndex >= 0) list.splice(sourceIndex, 1);
+		  await saveHistory(list);
+		  renderHistory();
+		  setStatus('Запись удалена');
+		});
+
+		container.appendChild(div);
+	  });
+	}
+	
+	function loadFromHistory(item) {
+	  if (!item || !item.state) return;
+      isRestoringDraft = true;
+
+	  // 1. Восстанавливаем дату меню
+	  CONFIG.dayTitle.text = item.date || '';
+	  const dayTitleInput = document.getElementById('dayTitleInput');
+	  if (dayTitleInput) {
+		dayTitleInput.value = CONFIG.dayTitle.text;
+	  }
+      CONFIG.image.outputName = CONFIG.dayTitle.text ? `${CONFIG.dayTitle.text}.png` : 'menu_output.png';
+      document.title = CONFIG.dayTitle.text ? `${CONFIG.dayTitle.text} — Конструктор меню` : 'Конструктор меню';
+      setTags(item.tags || []);
+      applyTemplateFromPath(item.templatePath || item.config?.image?.templatePath);
+
+	  // 2. Восстанавливаем состояние блоков
+	  Object.keys(CONFIG.blocks).forEach(name => {
+		if (!state[name]) {
+		  state[name] = { kcal: '', text: '', file: null, objectUrl: '', base64: '', imageElement: null };
+		}
+
+		const savedBlock = item.state[name] || {};
+		state[name].kcal = savedBlock.kcal || '';
+		state[name].text = savedBlock.text || '';
+		state[name].base64 = savedBlock.base64 || '';
+
+		// Восстанавливаем картинку из base64 (если есть)
+		if (state[name].base64) {
+		  if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+		  
+		  const byteString = atob(state[name].base64.split(',')[1]);
+		  const mimeString = state[name].base64.split(',')[0].split(':')[1].split(';')[0];
+		  const ab = new ArrayBuffer(byteString.length);
+		  const ia = new Uint8Array(ab);
+		  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+		  const blob = new Blob([ab], { type: mimeString });
+		  state[name].objectUrl = URL.createObjectURL(blob);
+		  state[name].file = { name: `${name}.png` };
+          state[name].imageElement = null;
+		} else {
+		  state[name].objectUrl = '';
+		  state[name].file = null;
+          state[name].imageElement = null;
+		}
+	  });
+
+	  // 3. Самое важное — перестраиваем всю форму заново с актуальными данными
+	  buildForm();
+
+	  // 4. Обновляем превью
+	  renderPreview();
+
+	  // 5. Закрываем панель истории
+	  historyDrawer.classList.remove('open');
+	  historyOverlay.classList.remove('open');
+
+	  setStatus(`Загружено меню: ${item.date || 'Без названия'}`);
+      isRestoringDraft = false;
+      scheduleDraftSave();
+	}
+
+    function applyDraft(draft) {
+      if (!draft || !draft.state) return false;
+      isRestoringDraft = true;
+      if (draft.config) {
+        deepMerge(CONFIG, draft.config);
+      }
+      CONFIG.dayTitle.text = draft.date || CONFIG.dayTitle.text || '';
+      if (dayTitleInput) dayTitleInput.value = CONFIG.dayTitle.text;
+      CONFIG.image.outputName = CONFIG.dayTitle.text ? `${CONFIG.dayTitle.text}.png` : 'menu_output.png';
+      document.title = CONFIG.dayTitle.text ? `${CONFIG.dayTitle.text} — Конструктор меню` : 'Конструктор меню';
+      setTags(draft.tags || []);
+      applyTemplateFromPath(draft.templatePath || draft.config?.image?.templatePath);
+
+      Object.keys(CONFIG.blocks).forEach((name) => {
+        if (!state[name]) state[name] = { kcal: '', text: '', file: null, objectUrl: '', base64: '', imageElement: null };
+        const savedBlock = draft.state[name] || {};
+        state[name].kcal = savedBlock.kcal || '';
+        state[name].text = savedBlock.text || '';
+        state[name].base64 = savedBlock.base64 || '';
+        if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+        if (state[name].base64) {
+          const byteString = atob(state[name].base64.split(',')[1]);
+          const mimeString = state[name].base64.split(',')[0].split(':')[1].split(';')[0];
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+          const blob = new Blob([ab], { type: mimeString });
+          state[name].objectUrl = URL.createObjectURL(blob);
+          state[name].file = { name: `${name}.png` };
+          state[name].imageElement = null;
+        } else {
+          state[name].objectUrl = '';
+          state[name].file = null;
+          state[name].imageElement = null;
+        }
+      });
+
+      buildForm();
+      fillGlobalSettings();
+      renderPreview();
+      isRestoringDraft = false;
+      setStatus('Черновик восстановлен.');
+      return true;
+    }
+
+    function deepMerge(target, source) {
+      for (const key of Object.keys(source)) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) target[key] = {};
+          deepMerge(target[key], source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+      return target;
+    }
+
+	function updateTemplateSource() {
+	  let path = currentTemplatePath || CONFIG.image.templatePath || templatesCache[0]?.path || './templates/template.png';
+      CONFIG.image.templatePath = path;
+
+	  templateImage.src = resolveAssetPath(path);
+
+      const metaTemplate = document.getElementById('metaTemplate');
+      const metaOutput = document.getElementById('metaOutput');
+      const metaImageSize = document.getElementById('metaImageSize');
+	  if (metaTemplate) metaTemplate.textContent = `Шаблон: ${path}`;
+	  if (metaOutput) metaOutput.textContent = `Файл: ${CONFIG.image.outputName}`;
+	  if (metaImageSize) metaImageSize.textContent = `Размер картинки: ${CONFIG.image.size[0]} × ${CONFIG.image.size[1]}`;
+	}
+
+    function applyTemplateFromPath(path) {
+      if (!path) return;
+      const found = templatesCache.find((template) => template.path === path || template.fileName === path);
+      currentTemplatePath = found?.path || path;
+      currentMenuType = found?.id || currentTemplatePath;
+      CONFIG.image.templatePath = currentTemplatePath;
+      renderTemplateOptions();
+      updateTemplateSource();
+    }
+
+    function buildForm() {
+	  document.getElementById('dayTitleInput').value = CONFIG.dayTitle.text || '';
+      blocksContainer.innerHTML = '';
+      Object.keys(CONFIG.blocks).forEach((name) => {
+        if (!state[name]) state[name] = { kcal: '', text: '', file: null, objectUrl: '', base64: '', imageElement: null };
+        if (!('imageElement' in state[name])) state[name].imageElement = null;
+
+        const card = document.createElement('section');
+        card.className = 'block-card';
+        card.innerHTML = `<h3>${name}</h3>`;
+
+        const kcalField = document.createElement('div');
+        kcalField.className = 'field';
+        const kcalInput = document.createElement('input');
+        kcalInput.type = 'number';
+        kcalInput.inputMode = 'numeric';
+        kcalInput.placeholder = 'Калории, например 420';
+        kcalInput.value = state[name].kcal || '';
+        kcalInput.addEventListener('input', () => {
+		  state[name].kcal = kcalInput.value.trim();
+		  renderPreview();
+          scheduleDraftSave();
+		});
+		kcalInput.addEventListener('blur', () => {
+		  state[name].kcal = kcalInput.value.trim();
+		  renderPreview();
+          scheduleDraftSave();
+		});
+        kcalField.append(kcalInput);
+
+        const textField = document.createElement('div');
+        textField.className = 'field';
+        const textArea = document.createElement('textarea');
+        textArea.placeholder = 'Описание / рецепт';
+		textArea.value = state[name].text || ''; // ← ВОТ ЭТА СТРОКА
+		let textDebounce;
+		textArea.addEventListener('input', () => {
+		  state[name].text = textArea.value;
+		  clearTimeout(textDebounce);
+		  textDebounce = setTimeout(() => {
+            renderPreview();
+            scheduleDraftSave();
+          }, 400);
+		});
+        textField.append(textArea);
+
+        const fileField = document.createElement('div');
+        fileField.className = 'field';
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.className = 'file-input';
+        fileInput.id = `file-${name}`;
+        const pickerBtn = document.createElement('button');
+        pickerBtn.type = 'button';
+        pickerBtn.className = 'file-picker-btn';
+        pickerBtn.dataset.tooltip = 'Выбрать файл';
+        pickerBtn.setAttribute('aria-label', 'Выбрать файл');
+        pickerBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+        pickerBtn.addEventListener('click', () => {
+          const scrollSnapshot = captureScrollState();
+          fileInput.click();
+          fileInput.blur();
+          restoreScrollStateSoon(scrollSnapshot);
+        });
+        const fileNameChip = document.createElement('div');
+        fileNameChip.className = 'file-name-chip';
+        fileNameChip.textContent = state[name].file?.name || 'Файл не выбран';
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'ghost-btn icon-btn';
+        clearBtn.dataset.tooltip = 'Убрать картинку';
+        clearBtn.setAttribute('aria-label', 'Убрать картинку');
+        clearBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+        clearBtn.addEventListener('click', () => {
+          if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+          state[name].file = null;
+          state[name].objectUrl = '';
+          state[name].base64 = '';
+          state[name].imageElement = null;
+          fileInput.value = '';
+          fileNameChip.textContent = 'Файл не выбран';
+          renderPreview();
+          scheduleDraftSave();
+        });
+		fileInput.addEventListener('change', async () => {
+          const file = fileInput.files?.[0] || null;
+          if (!file) return;
+
+          const scrollSnapshot = captureScrollState();
+          fileInput.blur();
+          fileNameChip.textContent = 'Обрабатываю...';
+          pickerBtn.setAttribute('aria-busy', 'true');
+          showFeedback(`Обрабатываю картинку для "${name}"...`, '↻');
+          restoreScrollStateSoon(scrollSnapshot);
+
+          try {
+            if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+
+            const sourceUrl = URL.createObjectURL(file);
+            const img = await loadImage(sourceUrl);
+            URL.revokeObjectURL(sourceUrl);
+
+            const preparedImage = downscaleImageForProcessing(img, 1600);
+            await nextFrame();
+            const processedCanvas = removeBackgroundAdvanced(preparedImage);
+            const blob = await canvasToBlob(processedCanvas);
+            const cleanUrl = URL.createObjectURL(blob);
+            const cleanImage = await loadImage(cleanUrl);
+
+            state[name].file = file;
+            state[name].objectUrl = cleanUrl;
+            state[name].base64 = processedCanvas.toDataURL('image/png');
+            state[name].imageElement = cleanImage;
+
+            fileNameChip.textContent = file.name;
+            await renderPreview();
+            restoreScrollStateSoon(scrollSnapshot);
+            scheduleDraftSave();
+            showFeedback(`Картинка добавлена: ${name}`, '✓');
+            setStatus(`Фон убран автоматически для "${name}"`);
+          } catch (error) {
+            console.error('Ошибка обработки картинки:', error);
+            fileInput.value = '';
+            fileNameChip.textContent = state[name].file?.name || 'Файл не выбран';
+            showFeedback('Не удалось обработать картинку', '!');
+            setStatus('Не удалось обработать картинку. Попробуй другой файл.');
+          } finally {
+            pickerBtn.removeAttribute('aria-busy');
+            restoreScrollStateSoon(scrollSnapshot);
+          }
+		  });
+		  
+		row.append(fileInput, pickerBtn, clearBtn, fileNameChip);
+		fileField.append(row);
+
+		card.append(kcalField, textField, fileField);
+		blocksContainer.append(card);
+
+	  }); // forEach закрывается
+	} // функция закрывается
+
+    function buildSettingsForm() {
+      blockSettingsContainer.innerHTML = '';
+      for (const [name, cfg] of Object.entries(CONFIG.blocks)) {
+        const section = document.createElement('section');
+        section.className = 'settings-group';
+        section.innerHTML = `
+          <h3>${name}</h3>
+          <div class="field-grid two">
+            <div class="field">
+              <label>X центра картинки</label>
+              <input type="number" data-path="blocks.${name}.imageCenter.0" value="${cfg.imageCenter[0]}" />
+              <div class="field-help">Центр картинки по горизонтали.</div>
+            </div>
+            <div class="field">
+              <label>Y центра картинки</label>
+              <input type="number" data-path="blocks.${name}.imageCenter.1" value="${cfg.imageCenter[1]}" />
+              <div class="field-help">Центр картинки по вертикали.</div>
+            </div>
+            <div class="field">
+              <label>X начала текстового блока</label>
+              <input type="number" data-path="blocks.${name}.textBox.0" value="${cfg.textBox[0]}" />
+              <div class="field-help">Левая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y начала текстового блока</label>
+              <input type="number" data-path="blocks.${name}.textBox.1" value="${cfg.textBox[1]}" />
+              <div class="field-help">Верхняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X конца текстового блока</label>
+              <input type="number" data-path="blocks.${name}.textBox.2" value="${cfg.textBox[2]}" />
+              <div class="field-help">Правая граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>Y конца текстового блока</label>
+              <input type="number" data-path="blocks.${name}.textBox.3" value="${cfg.textBox[3]}" />
+              <div class="field-help">Нижняя граница области текста.</div>
+            </div>
+            <div class="field">
+              <label>X позиции калорий</label>
+              <input type="number" data-path="blocks.${name}.kcalPos.0" value="${cfg.kcalPos[0]}" />
+              <div class="field-help">Горизонтальная позиция строки калорий.</div>
+            </div>
+            <div class="field">
+              <label>Y позиции калорий</label>
+              <input type="number" data-path="blocks.${name}.kcalPos.1" value="${cfg.kcalPos[1]}" />
+              <div class="field-help">Вертикальная позиция строки калорий.</div>
+            </div>
+          </div>
+        `;
+        blockSettingsContainer.append(section);
+      }
+    }
+
+    function setByPath(obj, path, value) {
+      const parts = path.split('.');
+      let current = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = /^\d+$/.test(parts[i]) ? Number(parts[i]) : parts[i];
+        current = current[part];
+      }
+      const last = /^\d+$/.test(parts.at(-1)) ? Number(parts.at(-1)) : parts.at(-1);
+      current[last] = value;
+    }
+
+    function fillGlobalSettings() {
+      document.getElementById('setting-templatePath').value = CONFIG.image.templatePath;
+      document.getElementById('setting-outputName').value = CONFIG.image.outputName;
+      document.getElementById('setting-imageWidth').value = CONFIG.image.size[0];
+      document.getElementById('setting-imageHeight').value = CONFIG.image.size[1];
+      document.getElementById('setting-sizeText').value = CONFIG.font.sizeText;
+      document.getElementById('setting-sizeKcal').value = CONFIG.font.sizeKcal;
+      document.getElementById('setting-totalFontSize').value = CONFIG.font.totalFontSize;
+      document.getElementById('setting-lineGap').value = CONFIG.font.lineGap;
+      document.getElementById('setting-fontWeight').value = CONFIG.font.weight;
+      document.getElementById('setting-fontFamily').value = CONFIG.font.family;
+      document.getElementById('setting-textColor').value = CONFIG.render.textColor;
+      document.getElementById('setting-totalColor').value = CONFIG.totalKcal.color;
+      document.getElementById('setting-totalX').value = CONFIG.totalKcal.pos[0];
+      document.getElementById('setting-totalY').value = CONFIG.totalKcal.pos[1];
+      document.getElementById('setting-totalPrefix').value = CONFIG.render.totalPrefix;
+      document.getElementById('setting-kcalSuffix').value = CONFIG.render.kcalSuffix;
+      document.getElementById('setting-dayTitleX').value = CONFIG.dayTitle.pos[0];
+      document.getElementById('setting-dayTitleY').value = CONFIG.dayTitle.pos[1];
+      document.getElementById('setting-dayTitleFont').value = CONFIG.dayTitle.fontSize;
+      buildSettingsForm();
+    }
+
+    function readSettingsFromUI() {
+      CONFIG.image.templatePath = document.getElementById('setting-templatePath').value.trim() || './templates/template.png';
+      CONFIG.image.outputName = document.getElementById('setting-outputName').value.trim() || 'menu_output.png';
+      CONFIG.image.size[0] = Number(document.getElementById('setting-imageWidth').value) || 150;
+      CONFIG.image.size[1] = Number(document.getElementById('setting-imageHeight').value) || 150;
+      CONFIG.font.sizeText = Number(document.getElementById('setting-sizeText').value) || 18;
+      CONFIG.font.sizeKcal = Number(document.getElementById('setting-sizeKcal').value) || 26;
+      CONFIG.font.totalFontSize = Number(document.getElementById('setting-totalFontSize').value) || 34;
+      CONFIG.font.lineGap = Number(document.getElementById('setting-lineGap').value) || 8;
+      CONFIG.font.weight = document.getElementById('setting-fontWeight').value || '700';
+      CONFIG.font.family = document.getElementById('setting-fontFamily').value.trim() || 'Segoe UI, sans-serif';
+      CONFIG.render.textColor = document.getElementById('setting-textColor').value.trim() || 'rgba(79, 92, 148, 1)';
+      CONFIG.totalKcal.color = document.getElementById('setting-totalColor').value.trim() || 'rgba(79, 92, 148, 1)';
+      CONFIG.totalKcal.pos[0] = Number(document.getElementById('setting-totalX').value) || 55;
+      CONFIG.totalKcal.pos[1] = Number(document.getElementById('setting-totalY').value) || 1490;
+      CONFIG.render.totalPrefix = document.getElementById('setting-totalPrefix').value || 'Общая калорийность на день:';
+      CONFIG.render.kcalSuffix = document.getElementById('setting-kcalSuffix').value.trim() || 'ккал';
+      CONFIG.dayTitle.pos[0] = Number(document.getElementById('setting-dayTitleX').value) || CONFIG.dayTitle.pos[0];
+      CONFIG.dayTitle.pos[1] = Number(document.getElementById('setting-dayTitleY').value) || CONFIG.dayTitle.pos[1];
+      CONFIG.dayTitle.fontSize = Number(document.getElementById('setting-dayTitleFont').value) || CONFIG.dayTitle.fontSize;
+
+      document.querySelectorAll('[data-path]').forEach((input) => {
+        const raw = Number(input.value);
+        setByPath(CONFIG, input.dataset.path, Number.isFinite(raw) ? raw : 0);
+      });
+
+      updateTemplateSource();
+    }
+
+    function fitRect(srcW, srcH, maxW, maxH) {
+      const scale = Math.min(maxW / srcW, maxH / srcH);
+      return {
+        width: Math.max(1, Math.round(srcW * scale)),
+        height: Math.max(1, Math.round(srcH * scale))
+      };
+    }
+
+    function splitTokenToFit(context, token, maxWidth) {
+      const chunks = [];
+      let chunk = '';
+      for (const char of String(token || '')) {
+        const test = chunk + char;
+        if (!chunk || context.measureText(test).width <= maxWidth) {
+          chunk = test;
+        } else {
+          chunks.push(chunk);
+          chunk = char;
+        }
+      }
+      if (chunk) chunks.push(chunk);
+      return chunks;
+    }
+
+    function drawWrappedText(context, text, x, y, maxWidth, lineHeight) {
+      const paragraphs = String(text || '').split(/\n/);
+      let currentY = y;
+      for (const paragraph of paragraphs) {
+        if (!paragraph.trim()) {
+          currentY += lineHeight;
+          continue;
+        }
+        const words = paragraph.split(/\s+/).flatMap((word) =>
+          context.measureText(word).width > maxWidth
+            ? splitTokenToFit(context, word, maxWidth)
+            : [word]
+        );
+        let line = '';
+        for (const word of words) {
+          const testLine = line ? `${line} ${word}` : word;
+          if (context.measureText(testLine).width <= maxWidth) {
+            line = testLine;
+          } else {
+            if (line) {
+              context.fillText(line, x, currentY);
+              currentY += lineHeight;
+            }
+            line = word;
+          }
+        }
+        if (line) {
+          context.fillText(line, x, currentY);
+          currentY += lineHeight;
+        }
+      }
+      return currentY;
+    }
+
+	// Вспомогательная загрузка изображения
+	function loadImage(src) {
+	  return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Не удалось загрузить изображение'));
+		img.src = src;
+	  });
+	}
+
+    function nextFrame() {
+      return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    }
+
+    function downscaleImageForProcessing(img, maxSide = 1600) {
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      if (scale >= 1) return img;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      const canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
+      canvasCtx.imageSmoothingEnabled = true;
+      canvasCtx.imageSmoothingQuality = 'high';
+      canvasCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Не удалось подготовить PNG'));
+        }, 'image/png');
+      });
+    }
+
+	// Качественное удаление фона
+	function removeBackgroundAdvanced(img) {
+	  const canvas = document.createElement('canvas');
+	  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+	  canvas.width = img.naturalWidth || img.width;
+	  canvas.height = img.naturalHeight || img.height;
+	  ctx.drawImage(img, 0, 0);
+
+	  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+	  const data = imageData.data;
+
+	  const bgColor = getDominantEdgeColor(imageData);
+	  const tolerance = 20; // можно подкрутить (30-50)
+
+	  for (let i = 0; i < data.length; i += 4) {
+		const r = data[i];
+		const g = data[i + 1];
+		const b = data[i + 2];
+
+		const diff = Math.sqrt(
+		  Math.pow(r - bgColor.r, 2) +
+		  Math.pow(g - bgColor.g, 2) +
+		  Math.pow(b - bgColor.b, 2)
+		);
+
+		if (diff < tolerance) {
+		  data[i + 3] = 0; // прозрачный
+		}
+	  }
+
+	  ctx.putImageData(imageData, 0, 0);
+	  return canvas;
+	}
+
+	function getDominantEdgeColor(imageData) {
+	  const data = imageData.data;
+	  const width = imageData.width;
+	  const height = imageData.height;
+	  const colors = {};
+
+	  const edges = [];
+
+	  // верх + низ
+	  for (let x = 0; x < width; x++) {
+		edges.push(getPixel(data, x, 0, width));
+		edges.push(getPixel(data, x, height-1, width));
+	  }
+	  // лево + право
+	  for (let y = 0; y < height; y++) {
+		edges.push(getPixel(data, 0, y, width));
+		edges.push(getPixel(data, width-1, y, width));
+	  }
+
+	  let maxCount = 0;
+	  let dominant = { r: 255, g: 255, b: 255 };
+
+	  for (let color of edges) {
+		const key = `${color.r},${color.g},${color.b}`;
+		colors[key] = (colors[key] || 0) + 1;
+		if (colors[key] > maxCount) {
+		  maxCount = colors[key];
+		  dominant = color;
+		}
+	  }
+
+	  return dominant;
+	}
+
+	function getPixel(data, x, y, width) {
+	  const i = (y * width + x) * 4;
+	  return { r: data[i], g: data[i+1], b: data[i+2] };
+	}
+
+    async function renderPreview() {
+      const renderId = ++renderSequence;
+      if (!templateImage.complete) {
+        setStatus(`Жду загрузку ${CONFIG.image.templatePath}...`);
+        return;
+      }
+
+      previewCanvas.width = templateImage.naturalWidth || 1024;
+      previewCanvas.height = templateImage.naturalHeight || 1536;
+
+      ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      ctx.drawImage(templateImage, 0, 0, previewCanvas.width, previewCanvas.height);
+
+      let totalKcal = 0;
+
+      if (CONFIG.dayTitle && CONFIG.dayTitle.text) {
+        ctx.fillStyle = CONFIG.render.textColor;
+        ctx.font = `${CONFIG.font.weight} ${CONFIG.dayTitle.fontSize}px ${CONFIG.font.family}`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'start';
+        ctx.fillText(CONFIG.dayTitle.text, CONFIG.dayTitle.pos[0], CONFIG.dayTitle.pos[1]);
+        ctx.textAlign = 'start';
+      }
+
+      for (const [name, blockCfg] of Object.entries(CONFIG.blocks)) {
+        const block = state[name] || {};
+        const kcal = String(block.kcal || '').trim();
+        const text = String(block.text || '').trim();
+        const fileUrl = block.objectUrl;
+
+        if (/^\d+$/.test(kcal)) totalKcal += Number(kcal);
+
+        if (fileUrl) {
+          try {
+            const img = block.imageElement || await loadImage(fileUrl);
+            block.imageElement = img;
+            if (renderId !== renderSequence) return;
+            const rect = fitRect(img.naturalWidth, img.naturalHeight, CONFIG.image.size[0], CONFIG.image.size[1]);
+            const x = blockCfg.imageCenter[0] - rect.width / 2;
+            const y = blockCfg.imageCenter[1] - rect.height / 2;
+            ctx.drawImage(img, x, y, rect.width, rect.height);
+          } catch (_) {}
+        }
+
+        if (text) {
+          const [x1, y1, x2] = blockCfg.textBox;
+          ctx.fillStyle = CONFIG.render.textColor;
+          ctx.font = `${CONFIG.font.weight} ${CONFIG.font.sizeText}px ${CONFIG.font.family}`;
+          ctx.textBaseline = 'top';
+          drawWrappedText(ctx, text, x1, y1, x2 - x1, CONFIG.font.sizeText + CONFIG.font.lineGap);
+        }
+
+        if (kcal) {
+          const [kx, ky] = blockCfg.kcalPos;
+          ctx.fillStyle = CONFIG.render.textColor;
+          ctx.font = `${CONFIG.font.weight} ${CONFIG.font.sizeKcal}px ${CONFIG.font.family}`;
+          ctx.textBaseline = 'top';
+          ctx.fillText(`${kcal} ${CONFIG.render.kcalSuffix}`, kx, ky);
+        }
+      }
+
+      ctx.fillStyle = CONFIG.totalKcal.color;
+      ctx.font = `${CONFIG.font.weight} ${CONFIG.font.totalFontSize}px ${CONFIG.font.family}`;
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${CONFIG.render.totalPrefix} ${totalKcal}`, CONFIG.totalKcal.pos[0], CONFIG.totalKcal.pos[1]);
+
+      setStatus('Превью обновлено.');
+    }
+
+
+    async function resetForm(options = {}) {
+      const silent = Boolean(options?.silent);
+		  // очищаем dayTitle
+	  CONFIG.dayTitle.text = '';
+	  if (dayTitleInput) dayTitleInput.value = '';
+      setTags([]);
+	  
+      Object.keys(state).forEach((name) => {
+        if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+        state[name] = { kcal: '', text: '', file: null, objectUrl: '', base64: '', imageElement: null };
+      });
+      buildForm();
+      renderPreview();
+      await clearDraft();
+      setStatus('Поля очищены.');
+      if (!silent) {
+        flashActionButton(resetBtn, 'success');
+        showFeedback('Поля очищены', '↺');
+      }
+    }
+
+    function openSettings() {
+      settingsDrawer.classList.add('open');
+      settingsOverlay.classList.add('open');
+    }
+    function closeSettings() {
+      settingsDrawer.classList.remove('open');
+      settingsOverlay.classList.remove('open');
+    }
+
+    async function saveSettingsLocal() {
+      readSettingsFromUI();
+      if (desktopBridge && typeof desktopBridge.saveSettings === 'function') {
+        await desktopBridge.saveSettings(CONFIG);
+      } else {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(CONFIG));
+      }
+      renderPreview();
+      setStatus('Настройки сохранены.');
+    }
+
+    async function loadSettingsLocal() {
+      const savedConfig = desktopBridge && typeof desktopBridge.loadSettings === 'function'
+        ? await desktopBridge.loadSettings()
+        : JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+      if (!savedConfig) {
+        setStatus('Сохранённые настройки не найдены.');
+        return;
+      }
+      deepMerge(CONFIG, JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+      deepMerge(CONFIG, savedConfig);
+      fillGlobalSettings();
+      updateTemplateSource();
+      renderPreview();
+      setStatus('Настройки загружены.');
+    }
+
+    function exportSettingsJson() {
+      readSettingsFromUI();
+      const blob = new Blob([JSON.stringify(CONFIG, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mad-marathon-settings.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus('JSON с настройками выгружен.');
+    }
+
+    async function downloadProjectZip() {
+      try {
+        const zip = new JSZip();
+        const indexSource = document.documentElement.outerHTML;
+        zip.file('index.html', indexSource);
+        const templatePath =
+          (typeof CONFIG !== 'undefined' && CONFIG.image && CONFIG.image.templatePath)
+            ? CONFIG.image.templatePath
+            : './templates/template.png';
+        const resp = await fetch(templatePath);
+        if (!resp.ok) throw new Error('Не удалось загрузить шаблон: ' + templatePath);
+        const blob = await resp.blob();
+		const logoResp = await fetch('./templates/logo.png');
+			if (logoResp.ok) {
+			  const logoBlob = await logoResp.blob();
+			  zip.file('logo.png', logoBlob);
+			}
+
+        zip.file('template.png', blob);
+        const content = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mad-marathon-project.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus('Проект упакован в mad-marathon-project.zip');
+      } catch (err) {
+        console.error(err);
+        if (typeof setStatus === 'function') setStatus('Ошибка при сборке проекта: ' + err.message);
+      }
+    }
+
+    openSettingsBtn.addEventListener('click', openSettings);
+    closeSettingsBtn.addEventListener('click', closeSettings);
+    settingsOverlay.addEventListener('click', closeSettings);
+    resetBtn.addEventListener('click', () => resetForm());
+    applySettingsBtn.addEventListener('click', () => {
+      readSettingsFromUI();
+      applyTemplateFromPath(CONFIG.image.templatePath);
+      renderPreview();
+      scheduleDraftSave();
+      setStatus('Настройки применены.');
+    });
+    saveSettingsBtn.addEventListener('click', saveSettingsLocal);
+    loadSettingsBtn.addEventListener('click', loadSettingsLocal);
+    exportSettingsBtn.addEventListener('click', exportSettingsJson);
+
+    templateImage.onload = () => renderPreview();
+    templateImage.onerror = () =>
+      setStatus(`Не удалось загрузить ${CONFIG.image.templatePath}. Проверь путь в настройках.`);
+
+    buildForm();
+	
+	if (dayTitleInput) {
+	  dayTitleInput.value = CONFIG.dayTitle.text || '';
+	  dayTitleInput.focus();
+	  dayTitleInput.addEventListener('input', () => {
+		CONFIG.dayTitle.text = dayTitleInput.value;
+		CONFIG.image.outputName = dayTitleInput.value ? `${dayTitleInput.value}.png` : 'menu_output.png';
+		document.title = dayTitleInput.value ? `${dayTitleInput.value} — Конструктор меню` : 'Конструктор меню';
+		renderPreview();
+        scheduleDraftSave();
+	  });
+	}
+
+    fillGlobalSettings();
+    (async () => {
+      try {
+        await runDiagnostics();
+        await loadTemplatesInitial();
+        await loadHistoryInitial();
+        const savedConfig = desktopBridge && typeof desktopBridge.loadSettings === 'function'
+          ? await desktopBridge.loadSettings()
+          : JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+
+        if (savedConfig) {
+          deepMerge(CONFIG, JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+          deepMerge(CONFIG, savedConfig);
+          fillGlobalSettings();
+          buildForm();
+        }
+        const draft = await loadDraftInitial();
+        if (draft) {
+          applyDraft(draft);
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки локальных данных:', error);
+      }
+
+      updateTemplateSource();
+      if (typeof renderHistory === 'function') {
+        renderHistory();
+      }
+    })();
+	
+	
+	(function () {
+	  const DAYS_RU = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+	  const MONTHS_RU = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+	  const MONTHS_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+	  const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+	  const trigger = document.getElementById('calTrigger');
+	  const popup = document.getElementById('calPopup');
+	  const input = document.getElementById('dayTitleInput');
+	  if (!trigger || !popup || !input) return;
+
+	  const now = new Date();
+	  let viewYear = now.getFullYear();
+	  let viewMonth = now.getMonth();
+	  let selectedDate = null;
+
+	  function formatDate(d) {
+		const dow = DAYS_RU[d.getDay()];
+		const day = d.getDate();
+		const mon = MONTHS_RU[d.getMonth()];
+		return `${dow}, ${day} ${mon}`;
+	  }
+
+	  function renderCal() {
+		const firstDay = new Date(viewYear, viewMonth, 1);
+		const lastDay = new Date(viewYear, viewMonth + 1, 0);
+
+		let startDow = firstDay.getDay();
+		startDow = startDow === 0 ? 6 : startDow - 1;
+
+		popup.innerHTML = `
+		  <div class="cal-header">
+			<button class="cal-nav" id="calPrev">&#8249;</button>
+			<span>${MONTHS_NAMES[viewMonth]} ${viewYear}</span>
+			<button class="cal-nav" id="calNext">&#8250;</button>
+		  </div>
+		  <div class="cal-grid">
+			${DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}
+			${Array(startDow).fill('<div class="cal-day empty"></div>').join('')}
+			${Array.from({length: lastDay.getDate()}, (_, i) => {
+			  const d = i + 1;
+			  const date = new Date(viewYear, viewMonth, d);
+			  const isToday = date.toDateString() === now.toDateString();
+			  const isSel = selectedDate && date.toDateString() === selectedDate.toDateString();
+			  return `<div class="cal-day${isToday ? ' today' : ''}${isSel ? ' selected' : ''}" data-d="${d}">${d}</div>`;
+			}).join('')}
+		  </div>
+		`;
+
+		document.getElementById('calPrev').addEventListener('click', (e) => {
+		  e.stopPropagation();
+		  viewMonth--;
+		  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+		  renderCal();
+		});
+
+		document.getElementById('calNext').addEventListener('click', (e) => {
+		  e.stopPropagation();
+		  viewMonth++;
+		  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+		  renderCal();
+		});
+
+		popup.querySelectorAll('.cal-day[data-d]').forEach(el => {
+		  el.addEventListener('click', (e) => {
+			e.stopPropagation();
+			const d = Number(el.dataset.d);
+			selectedDate = new Date(viewYear, viewMonth, d);
+			const formatted = formatDate(selectedDate);
+			input.value = formatted;
+			CONFIG.dayTitle.text = formatted;
+			CONFIG.image.outputName = `${formatted}.png`;
+			document.title = `${formatted} — Конструктор меню`;
+			popup.classList.remove('open');
+			renderPreview();
+            scheduleDraftSave();
+		  });
+		});
+	  }
+
+	  trigger.addEventListener('click', (e) => {
+		e.stopPropagation();
+		popup.classList.toggle('open');
+		if (popup.classList.contains('open')) renderCal();
+	  });
+
+	  document.addEventListener('click', (e) => {
+		if (!popup.contains(e.target) && e.target !== trigger) {
+		  popup.classList.remove('open');
+		}
+	  });
+	})();
+	
+
+
+	function loadEntryFromHistory(entry) {
+	  CONFIG.dayTitle.text = entry.title;
+	  const dti = document.getElementById('dayTitleInput');
+	  if (dti) {
+		dti.value = entry.title;
+		CONFIG.image.outputName = entry.title ? `${entry.title}.png` : 'menu_output.png';
+		document.title = entry.title ? `${entry.title} — Конструктор меню` : 'Конструктор меню';
+	  }
+
+	  Object.keys(entry.blocks).forEach(name => {
+		if (state[name]) {
+		  state[name].kcal = entry.blocks[name].kcal || '';
+		  state[name].text = entry.blocks[name].text || '';
+		  state[name].base64 = entry.blocks[name].base64 || '';
+
+		  // восстанавливаем objectUrl из base64
+		  if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+		  if (state[name].base64) {
+			const byteString = atob(state[name].base64.split(',')[1]);
+			const mimeString = state[name].base64.split(',')[0].split(':')[1].split(';')[0];
+			const ab = new ArrayBuffer(byteString.length);
+			const ia = new Uint8Array(ab);
+			for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+			const blob = new Blob([ab], { type: mimeString });
+			state[name].objectUrl = URL.createObjectURL(blob);
+			state[name].file = { name: `${name}.jpg` };
+		  } else {
+			state[name].objectUrl = '';
+			state[name].file = null;
+		  }
+		}
+	  });
+
+	  buildForm();
+	  renderPreview();
+	  closeHistory();
+	  setStatus(`Загружено: ${entry.title}`);
+	}
+	
+		const batchGenerateBtn = document.getElementById('batchGenerateBtn');
+	if (batchGenerateBtn) {
+	  batchGenerateBtn.addEventListener('click', async () => {
+		const list = loadHistory();
+		if (!list.length) { setStatus('История пуста — нечего генерировать.'); return; }
+		batchGenerateBtn.disabled = true;
+		try {
+		  const zip = new JSZip();
+		  const savedTitle = CONFIG.dayTitle.text;
+		  const savedState = {};
+		  Object.keys(state).forEach(name => { savedState[name] = { ...state[name] }; });
+		  for (const entry of list) {
+			CONFIG.dayTitle.text = entry.date || '';
+			const entryState = entry.state || {};
+			for (const name of Object.keys(entryState)) {
+			  if (!state[name]) continue;
+			  state[name].kcal = entryState[name].kcal || '';
+			  state[name].text = entryState[name].text || '';
+			  state[name].base64 = entryState[name].base64 || '';
+			  if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+			  if (state[name].base64) {
+				const byteString = atob(state[name].base64.split(',')[1]);
+				const mimeString = state[name].base64.split(',')[0].split(':')[1].split(';')[0];
+				const ab = new ArrayBuffer(byteString.length);
+				const ia = new Uint8Array(ab);
+				for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+				const blob = new Blob([ab], { type: mimeString });
+				state[name].objectUrl = URL.createObjectURL(blob);
+			  } else {
+				state[name].objectUrl = '';
+			  }
+			}
+			await renderPreview();
+			const pngBlob = await new Promise(resolve => previewCanvas.toBlob(resolve, 'image/png'));
+			if (pngBlob) zip.file(`${entry.date || 'menu_' + entry.createdAt}.png`, pngBlob);
+			Object.keys(state).forEach(name => {
+			  if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+			  state[name].objectUrl = '';
+			});
+		  }
+		  CONFIG.dayTitle.text = savedTitle;
+		  Object.keys(savedState).forEach(name => { state[name] = { ...savedState[name] }; });
+		  buildForm();
+		  renderPreview();
+		  const content = await zip.generateAsync({ type: 'blob' });
+		  const url = URL.createObjectURL(content);
+		  const a = document.createElement('a');
+		  a.href = url;
+		  a.download = 'mad-marathon-menus.zip';
+		  document.body.appendChild(a);
+		  a.click();
+		  a.remove();
+		  URL.revokeObjectURL(url);
+		  setStatus(`Сгенерировано ${list.length} меню в архив.`);
+		} catch (err) {
+		  console.error(err);
+		  setStatus('Ошибка: ' + err.message);
+		} finally {
+		  batchGenerateBtn.disabled = false;
+		}
+	  });
+	}
+	updateTemplateSource();
+	buildForm();
+	fillGlobalSettings();
+	renderPreview();
+	
+    // === ИНИЦИАЛИЗАЦИЯ ИСТОРИИ ПРИ ЗАГРУЗКЕ ===
+    setTimeout(() => {
+      if (typeof renderHistory === 'function') {
+        renderHistory();
+      }
+    }, 300);
+
+    console.log('✅ История меню инициализирована');
+
+    // =============================================
+    // КНОПКА «ОЧИСТИТЬ ВСЮ ИСТОРИЮ»
+    // =============================================
+    const restoreHistoryBtn = document.getElementById('restoreHistoryBtn');
+    const exportHistoryZipBtn = document.getElementById('exportHistoryZipBtn');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+    if (exportHistoryZipBtn) {
+      exportHistoryZipBtn.addEventListener('click', async () => {
+        await exportHistoryZip();
+      });
+    }
+
+    if (restoreHistoryBtn) {
+      restoreHistoryBtn.addEventListener('click', async () => {
+        const loaded = await importHistoryFromJson();
+        if (!loaded) {
+          setStatus('Загрузка истории отменена.');
+          return;
+        }
+
+        renderHistory();
+        setStatus('История подгружена.');
+      });
+    }
+
+    if (clearHistoryBtn) {
+      const freshBtn = clearHistoryBtn.cloneNode(true);
+      clearHistoryBtn.parentNode.replaceChild(freshBtn, clearHistoryBtn);
+
+      freshBtn.addEventListener('click', async () => {
+        const confirmed = await confirmDesignModal({
+          title: 'Очистить историю?',
+          message: 'История будет очищена из приложения, но перед удалением мы сохраним резервный JSON в папке history.',
+          details: 'Если передумаешь, можно будет восстановить данные через импорт истории.',
+          confirmText: 'Очистить',
+          cancelText: 'Оставить',
+          danger: true
+        });
+        if (!confirmed) {
+          return;
+        }
+
+        const result = await clearHistoryWithBackup();
+
+        if (typeof renderHistory === 'function') {
+          renderHistory();
+        }
+
+        setStatus(result?.backupPath ? `История очищена. Резерв сохранён: ${result.backupPath}` : 'История полностью очищена');
+        console.log('✅ Вся история очищена');
+      });
+
+      console.log('✅ Обработчик кнопки "Очистить всю историю" добавлен');
+    } else {
+      console.warn('⚠️ Кнопка #clearHistoryBtn не найдена');
+    }
+	
+	// =============================================
+	// FIX: отключаем изменение number-input,
+	// но сохраняем скролл страницы
+	// =============================================
+
+	(function fixNumberInputWheelUX() {
+
+	  function onWheel(e) {
+		const active = document.activeElement;
+
+		if (
+		  active &&
+		  active.tagName === 'INPUT' &&
+		  active.type === 'number'
+		) {
+		  // 👇 ключевая магия
+		  active.blur(); // убираем фокус
+		}
+	  }
+
+	  document.addEventListener('wheel', onWheel, { passive: true });
+
+	})();
+   
+  </script>
+</body>
+</html>

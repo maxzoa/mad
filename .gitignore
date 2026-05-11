@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.tools/
+.build-preserve/
+history/
+saved-menus/
+*.bak
+
+# Old duplicated template copies from the source archive.
+/template.png
+/template2.png
+/template3.png
+/logo.png

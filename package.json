@@ -1,0 +1,42 @@
+{
+  "name": "mad-marathon-menu-builder",
+  "version": "2.0.1",
+  "description": "Offline Mad Marathon menu constructor",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "node build-product.js"
+  },
+  "build": {
+    "appId": "com.madmarathon.menuconstructor",
+    "productName": "Конструктор меню",
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "icon.ico",
+      "update-source.json",
+      "vendor/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12",
+    "png-to-ico": "^3.0.1"
+  }
+}
