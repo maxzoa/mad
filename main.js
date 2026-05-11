@@ -16,7 +16,7 @@ const MENU_EXPORTS_DIR = 'saved-menus';
 const SETTINGS_FILE = 'menu-settings.json';
 const TEMPLATE_DIR = 'templates';
 const TEMPLATE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp']);
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.0.4';
 const UPDATE_SOURCE_FILE = 'update-source.json';
 const DEFAULT_UPDATE_MANIFEST_URL = '';
 const STABLE_LAUNCHER_NAME = 'Конструктор меню.exe';
@@ -362,12 +362,13 @@ function normalizeUpdateManifest(raw) {
   const assetName = assets.length
     ? firstAsset.name || firstAsset.fileName || ''
     : '';
+  const digest = String(firstAsset.digest || '').trim().toLowerCase();
 
   return {
     latestVersion,
     downloadUrl: String(data.downloadUrl || data.download_url || assetUrl || data.html_url || data.url || ''),
     fileName: safeFileName(data.fileName || data.file_name || assetName || STABLE_LAUNCHER_NAME),
-    sha256: String(data.sha256 || data.checksum || '').trim().toLowerCase(),
+    sha256: String(data.sha256 || data.checksum || digest.replace(/^sha256:/, '') || '').trim().toLowerCase(),
     releaseUrl: String(data.releaseUrl || data.release_url || data.html_url || ''),
     notes: String(data.notes || data.body || data.description || ''),
     publishedAt: data.publishedAt || data.published_at || ''
@@ -479,6 +480,11 @@ async function installUpdate(update) {
   const downloadPath = path.join(updateDir, `${safeFileName(update.fileName || path.basename(targetPath))}.download`);
   const backupPath = `${launcherPath}.bak`;
   const scriptPath = path.join(updateDir, 'install-update.ps1');
+  const logPath = path.join(updateDir, 'last-update.log');
+
+  await fs.rm(downloadPath, { force: true });
+  await fs.rm(scriptPath, { force: true });
+  await fs.writeFile(logPath, `Update started: ${new Date().toISOString()}\r\n`, 'utf8');
 
   await downloadFile(update.downloadUrl, downloadPath);
 
@@ -497,23 +503,65 @@ async function installUpdate(update) {
     `$download = ${psLiteral(downloadPath)}`,
     `$target = ${psLiteral(targetPath)}`,
     `$backup = ${psLiteral(backupPath)}`,
-    'try { Wait-Process -Id $appPid -Timeout 90 -ErrorAction SilentlyContinue } catch {}',
+    `$log = ${psLiteral(logPath)}`,
+    'function Write-UpdateLog([string]$message) {',
+    '  try { Add-Content -LiteralPath $log -Encoding UTF8 -Value ("{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $message) } catch {}',
+    '}',
+    'Write-UpdateLog "installer started"',
+    'Write-UpdateLog ("download=" + $download)',
+    'Write-UpdateLog ("target=" + $target)',
+    'for ($i = 0; $i -lt 120; $i++) {',
+    '  try {',
+    '    $process = Get-Process -Id $appPid -ErrorAction SilentlyContinue',
+    '    if ($null -eq $process) { break }',
+    '  } catch { break }',
+    '  Start-Sleep -Milliseconds 500',
+    '}',
+    '$exitCode = 1',
     'try {',
-    '  if (Test-Path -LiteralPath $target) { Copy-Item -LiteralPath $target -Destination $backup -Force }',
-    '  Copy-Item -LiteralPath $download -Destination $target -Force',
+    '  if (-not (Test-Path -LiteralPath $download)) { throw "Downloaded update file was not found" }',
+    '  $downloadSize = (Get-Item -LiteralPath $download).Length',
+    '  for ($attempt = 1; $attempt -le 30; $attempt++) {',
+    '    try {',
+    '      Write-UpdateLog ("copy attempt " + $attempt)',
+    '      if (Test-Path -LiteralPath $target) { Copy-Item -LiteralPath $target -Destination $backup -Force }',
+    '      Copy-Item -LiteralPath $download -Destination $target -Force',
+    '      $targetSize = (Get-Item -LiteralPath $target).Length',
+    '      if ($targetSize -ne $downloadSize) { throw "Size mismatch after copy" }',
+    '      $exitCode = 0',
+    '      Write-UpdateLog "copy completed"',
+    '      break',
+    '    } catch {',
+    '      Write-UpdateLog ("copy attempt failed: " + $_.Exception.Message)',
+    '      Start-Sleep -Seconds 1',
+    '    }',
+    '  }',
+    '  if ($exitCode -ne 0) { throw "Unable to replace launcher" }',
     '  Start-Process -FilePath $target -WorkingDirectory (Split-Path -Parent $target)',
+    '  Write-UpdateLog "restarted updated application"',
     '} catch {',
+    '  Write-UpdateLog ("installer failed: " + $_.Exception.Message)',
     '  if (Test-Path -LiteralPath $backup) { Copy-Item -LiteralPath $backup -Destination $target -Force }',
-    '  exit 1',
+    '  if (Test-Path -LiteralPath $target) { Start-Process -FilePath $target -WorkingDirectory (Split-Path -Parent $target) }',
     '} finally {',
-    '  Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue',
-    '  Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue',
-    '}'
+    '  if ($exitCode -eq 0) {',
+    '    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue',
+    '    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue',
+    '  } else {',
+    '    Write-UpdateLog "update files were kept for diagnostics"',
+    '  }',
+    '}',
+    'exit $exitCode'
   ].join('\r\n');
 
   await fs.writeFile(scriptPath, `\uFEFF${script}`, 'utf16le');
 
-  const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath], {
+  const launchCommand = [
+    '$ErrorActionPreference = "Stop"',
+    `Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',${psLiteral(scriptPath)})`
+  ].join('; ');
+
+  const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', launchCommand], {
     cwd: appFolder,
     detached: true,
     stdio: 'ignore',
@@ -521,8 +569,8 @@ async function installUpdate(update) {
   });
   child.unref();
 
-  setTimeout(() => app.quit(), 350);
-  return { ok: true, targetPath };
+  setTimeout(() => app.quit(), 1200);
+  return { ok: true, targetPath, logPath };
 }
 
 async function installLatestUpdateIfAvailable() {
