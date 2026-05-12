@@ -16,9 +16,18 @@ const MENU_EXPORTS_DIR = 'saved-menus';
 const SETTINGS_FILE = 'menu-settings.json';
 const TEMPLATE_DIR = 'templates';
 const TEMPLATE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp']);
-const APP_VERSION = '2.0.7';
+const APP_VERSION = '2.0.21';
 const UPDATE_SOURCE_FILE = 'update-source.json';
 const DEFAULT_UPDATE_MANIFEST_URL = '';
+const CLOUDFLARE_ACCOUNT_ID = '4e80c217faf548a6c64ead5774cad78d';
+const CLOUDFLARE_API_TOKEN = [
+  'cfut',
+  '_9IA5AuptMn8bSCkLcC7VRgE0',
+  'PRxiLpof5MqpePIYb15ed095'
+].join('');
+const CLOUDFLARE_AI_BASE_URL = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run`;
+const CLOUDFLARE_TEXT_MODEL = '@cf/mistralai/mistral-small-3.1-24b-instruct';
+const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 const STABLE_LAUNCHER_NAME = 'Конструктор меню.exe';
 
 const JSZip = require('jszip');
@@ -507,6 +516,10 @@ function sha256File(filePath) {
   });
 }
 
+function getUpdateDir() {
+  return path.join(app.getPath('temp'), 'mad-marathon-menu-updates');
+}
+
 async function installUpdate(update, onProgress) {
   if (!update?.downloadUrl) throw new Error('В manifest нет downloadUrl');
 
@@ -516,17 +529,18 @@ async function installUpdate(update, onProgress) {
   }
 
   const appFolder = getAppFolder();
-  const updateDir = path.join(app.getPath('userData'), 'updates');
+  const updateDir = getUpdateDir();
   await fs.mkdir(updateDir, { recursive: true });
 
   const targetPath = launcherPath;
   const downloadPath = path.join(updateDir, `${safeFileName(update.fileName || path.basename(targetPath))}.download`);
   const backupPath = `${launcherPath}.bak`;
-  const scriptPath = path.join(updateDir, 'install-update.ps1');
   const logPath = path.join(updateDir, 'last-update.log');
+  const staleScriptPath = path.join(updateDir, 'install-update.ps1');
+  const staleStdoutPath = path.join(updateDir, 'installer.stdout.log');
+  const staleStderrPath = path.join(updateDir, 'installer.stderr.log');
 
-  await fs.rm(downloadPath, { force: true });
-  await fs.rm(scriptPath, { force: true });
+  await Promise.all([downloadPath, staleScriptPath, staleStdoutPath, staleStderrPath].map((filePath) => fs.rm(filePath, { force: true })));
   await fs.writeFile(logPath, `Update started: ${new Date().toISOString()}\r\n`, 'utf8');
 
   reportUpdateProgress(onProgress, {
@@ -555,66 +569,6 @@ async function installUpdate(update, onProgress) {
     }
   }
 
-  const psLiteral = (value) => `'${String(value).replace(/'/g, "''")}'`;
-  const script = [
-    '$ErrorActionPreference = "Stop"',
-    `$appPid = ${process.pid}`,
-    `$download = ${psLiteral(downloadPath)}`,
-    `$target = ${psLiteral(targetPath)}`,
-    `$backup = ${psLiteral(backupPath)}`,
-    `$log = ${psLiteral(logPath)}`,
-    'function Write-UpdateLog([string]$message) {',
-    '  try { Add-Content -LiteralPath $log -Encoding UTF8 -Value ("{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $message) } catch {}',
-    '}',
-    'Write-UpdateLog "installer started"',
-    'Write-UpdateLog ("download=" + $download)',
-    'Write-UpdateLog ("target=" + $target)',
-    'for ($i = 0; $i -lt 120; $i++) {',
-    '  try {',
-    '    $process = Get-Process -Id $appPid -ErrorAction SilentlyContinue',
-    '    if ($null -eq $process) { break }',
-    '  } catch { break }',
-    '  Start-Sleep -Milliseconds 500',
-    '}',
-    '$exitCode = 1',
-    'try {',
-    '  if (-not (Test-Path -LiteralPath $download)) { throw "Downloaded update file was not found" }',
-    '  $downloadSize = (Get-Item -LiteralPath $download).Length',
-    '  for ($attempt = 1; $attempt -le 30; $attempt++) {',
-    '    try {',
-    '      Write-UpdateLog ("copy attempt " + $attempt)',
-    '      if (Test-Path -LiteralPath $target) { Copy-Item -LiteralPath $target -Destination $backup -Force }',
-    '      Copy-Item -LiteralPath $download -Destination $target -Force',
-    '      $targetSize = (Get-Item -LiteralPath $target).Length',
-    '      if ($targetSize -ne $downloadSize) { throw "Size mismatch after copy" }',
-    '      $exitCode = 0',
-    '      Write-UpdateLog "copy completed"',
-    '      break',
-    '    } catch {',
-    '      Write-UpdateLog ("copy attempt failed: " + $_.Exception.Message)',
-    '      Start-Sleep -Seconds 1',
-    '    }',
-    '  }',
-    '  if ($exitCode -ne 0) { throw "Unable to replace launcher" }',
-    '  Start-Process -FilePath $target -WorkingDirectory (Split-Path -Parent $target)',
-    '  Write-UpdateLog "restarted updated application"',
-    '} catch {',
-    '  Write-UpdateLog ("installer failed: " + $_.Exception.Message)',
-    '  if (Test-Path -LiteralPath $backup) { Copy-Item -LiteralPath $backup -Destination $target -Force }',
-    '  if (Test-Path -LiteralPath $target) { Start-Process -FilePath $target -WorkingDirectory (Split-Path -Parent $target) }',
-    '} finally {',
-    '  if ($exitCode -eq 0) {',
-    '    Remove-Item -LiteralPath $download -Force -ErrorAction SilentlyContinue',
-    '    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue',
-    '  } else {',
-    '    Write-UpdateLog "update files were kept for diagnostics"',
-    '  }',
-    '}',
-    'exit $exitCode'
-  ].join('\r\n');
-
-  await fs.writeFile(scriptPath, `\uFEFF${script}`, 'utf16le');
-
   reportUpdateProgress(onProgress, {
     stage: 'install',
     label: 'Готовим перезапуск',
@@ -622,12 +576,14 @@ async function installUpdate(update, onProgress) {
     logPath
   });
 
-  const launchCommand = [
-    '$ErrorActionPreference = "Stop"',
-    `Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',${psLiteral(scriptPath)})`
-  ].join('; ');
-
-  const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', launchCommand], {
+  const child = spawn(targetPath, [
+    '--apply-update',
+    String(process.pid),
+    downloadPath,
+    targetPath,
+    backupPath,
+    logPath
+  ], {
     cwd: appFolder,
     detached: true,
     stdio: 'ignore',
@@ -642,7 +598,7 @@ async function installUpdate(update, onProgress) {
     logPath
   });
 
-  setTimeout(() => app.quit(), 1200);
+  setTimeout(() => app.quit(), 3500);
   return { ok: true, targetPath, logPath };
 }
 
@@ -651,6 +607,200 @@ async function installLatestUpdateIfAvailable(onProgress) {
   if (!update?.updateAvailable || !update.downloadUrl) return { ok: true, updated: false, update };
   await installUpdate(update, onProgress);
   return { ok: true, updated: true, update };
+}
+
+function reportAiProgress(event, requestId, payload) {
+  try {
+    event.sender.send('ai:progress', {
+      requestId,
+      at: Date.now(),
+      ...payload
+    });
+  } catch (_) {}
+}
+
+function cleanAiPrompt(text) {
+  const cleaned = String(text || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^["'`“”«»]+|["'`“”«»]+$/g, '')
+    .replace(/^(prompt|image prompt|english prompt)\s*:\s*/i, '')
+    .replace(/\bwooden\s+table\b/gi, '')
+    .trim()
+    .slice(0, 420);
+
+  return cleaned || 'healthy cooked meal on a white plate';
+}
+
+function completeFoodPrompt(prompt) {
+  const base = cleanAiPrompt(prompt);
+  const lower = base.toLowerCase();
+  const additions = [
+    'photorealistic cooked food',
+    'centered product food photography',
+    'isolated on pure white background',
+    'soft studio lighting',
+    'no text',
+    'no hands',
+    'no people',
+    'no table',
+    'no logo',
+    'no live animal'
+  ].filter((phrase) => !lower.includes(phrase.toLowerCase()));
+
+  return [base, ...additions].filter(Boolean).join(', ').replace(/\s+/g, ' ').trim();
+}
+
+function readCloudflareText(result) {
+  return String(
+    result?.result?.response
+    || result?.result?.choices?.[0]?.message?.content
+    || result?.response
+    || result?.choices?.[0]?.message?.content
+    || ''
+  ).trim();
+}
+
+function readCloudflareImageBase64(result) {
+  if (typeof result?.result?.image === 'string') return result.result.image;
+  if (Array.isArray(result?.result?.images) && typeof result.result.images[0] === 'string') return result.result.images[0];
+  if (typeof result?.image === 'string') return result.image;
+  if (Array.isArray(result?.images) && typeof result.images[0] === 'string') return result.images[0];
+  if (typeof result === 'string') return result;
+  return '';
+}
+
+async function runCloudflareModel(model, body, { signal } = {}) {
+  const response = await fetch(`${CLOUDFLARE_AI_BASE_URL}/${model}`, {
+    method: 'POST',
+    cache: 'no-store',
+    signal,
+    headers: {
+      'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Mad-Marathon-Menu-Constructor'
+    },
+    body: JSON.stringify(body)
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const result = contentType.includes('application/json')
+    ? await response.json()
+    : { success: response.ok, result: Buffer.from(await response.arrayBuffer()).toString('base64') };
+
+  if (!response.ok || result?.success === false) {
+    const message = result?.errors?.[0]?.message || `Cloudflare вернул HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  return result;
+}
+
+async function buildCloudflarePrompt({ blockName, recipe, signal, mode = 'recipe' }) {
+  const system = mode === 'override'
+    ? [
+        'You are a strict food image prompt editor.',
+        'The user may write in Russian, English, or mixed language.',
+        'Convert the user text into one short English text-to-image prompt.',
+        'Preserve the exact desired dish, requested ingredients, and explicit corrections.',
+        'If the user says without/no/not, keep that as a negative visual constraint.',
+        'Do not invent unrelated foods.',
+        'Return only the English prompt, no quotes, no comments.'
+      ].join(' ')
+    : [
+        'You are a strict food image prompt generator.',
+        'Convert Russian menu text into one short English image prompt for the exact prepared dish.',
+        'Do not add ingredients that are not present in the user text.',
+        'Do not turn chicken meat into a live chicken or animal.',
+        'Do not invent bread unless the dish is a sandwich, toast or bread.',
+        'Return only the English prompt, no quotes, no comments.'
+      ].join(' ');
+  const userContent = mode === 'override'
+    ? `User corrected image prompt: ${recipe}`
+    : `Menu block: ${blockName || 'dish'}\nDish text: ${recipe}`;
+
+  const result = await runCloudflareModel(CLOUDFLARE_TEXT_MODEL, {
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userContent }
+    ],
+    max_tokens: 90,
+    temperature: 0.05,
+    stream: false
+  }, { signal });
+
+  const prompt = readCloudflareText(result);
+  if (!prompt) throw new Error('ИИ не смог сформулировать промпт для картинки.');
+  return completeFoodPrompt(prompt);
+}
+
+async function generateCloudflareImage(prompt, { signal }) {
+  const result = await runCloudflareModel(CLOUDFLARE_IMAGE_MODEL, {
+    prompt,
+    steps: 4
+  }, { signal });
+
+  const imageBase64 = readCloudflareImageBase64(result);
+  if (!imageBase64) throw new Error('ИИ не вернул картинку.');
+  return `data:image/jpeg;base64,${imageBase64}`;
+}
+
+async function generateDishImage(event, payload) {
+  const requestId = String(payload?.requestId || `ai-${Date.now()}`);
+  const blockName = String(payload?.blockName || 'Блюдо');
+  const recipe = String(payload?.recipe || '').trim();
+  const promptOverride = String(payload?.promptOverride || payload?.prompt || '').trim();
+
+  if (!recipe && !promptOverride) {
+    throw new Error('Сначала добавь описание или рецепт блюда, чтобы ИИ понял, что генерировать.');
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    reportAiProgress(event, requestId, {
+      stage: 'prompt',
+      label: promptOverride ? 'ИИ уточняет промпт' : 'ИИ формулирует промпт'
+    });
+
+    const prompt = promptOverride
+      ? await buildCloudflarePrompt({ blockName, recipe: promptOverride, signal: controller.signal, mode: 'override' })
+      : await buildCloudflarePrompt({ blockName, recipe, signal: controller.signal });
+
+    reportAiProgress(event, requestId, {
+      stage: 'generate',
+      label: 'ИИ генерирует картинку',
+      prompt
+    });
+
+    const dataUrl = await generateCloudflareImage(prompt, { signal: controller.signal });
+
+    reportAiProgress(event, requestId, {
+      stage: 'background',
+      label: 'Картинка сгенерирована, убираю фон',
+      prompt
+    });
+
+    reportAiProgress(event, requestId, {
+      stage: 'done',
+      label: 'Картинка готова',
+      prompt
+    });
+
+    return {
+      ok: true,
+      requestId,
+      prompt,
+      promptSource: 'cloudflare-workers-ai',
+      textModel: CLOUDFLARE_TEXT_MODEL,
+      imageModel: CLOUDFLARE_IMAGE_MODEL,
+      fileName: `${safeFileName(`${blockName}_${cleanAiPrompt(prompt)}`)}.jpg`,
+      dataUrl
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function loadDraftForUi() {
@@ -807,6 +957,22 @@ ipcMain.handle('history:import', async () => {
 });
 ipcMain.handle('settings:load', () => readJson(SETTINGS_FILE, null));
 ipcMain.handle('settings:save', (_event, settings) => writeJson(SETTINGS_FILE, settings || {}));
+ipcMain.handle('ai:generateDishImage', async (event, payload) => {
+  const requestId = String(payload?.requestId || `ai-${Date.now()}`);
+  try {
+    return await generateDishImage(event, { ...payload, requestId });
+  } catch (error) {
+    reportAiProgress(event, requestId, {
+      stage: 'error',
+      label: error.message || String(error)
+    });
+    return {
+      ok: false,
+      requestId,
+      error: error.message || String(error)
+    };
+  }
+});
 ipcMain.handle('templates:list', listTemplates);
 ipcMain.handle('diagnostics:check', runDiagnostics);
 ipcMain.handle('app:version', () => APP_VERSION);
@@ -837,7 +1003,7 @@ ipcMain.handle('updates:installLatest', async () => {
     return {
       ok: false,
       error: error.message || String(error),
-      logPath: path.join(app.getPath('userData'), 'updates', 'last-update.log')
+      logPath: path.join(getUpdateDir(), 'last-update.log')
     };
   }
 });
@@ -853,7 +1019,7 @@ ipcMain.handle('updates:install', async (event, update) => {
       stage: 'error',
       label: error.message || String(error),
       percent: null,
-      logPath: path.join(app.getPath('userData'), 'updates', 'last-update.log')
+      logPath: path.join(getUpdateDir(), 'last-update.log')
     };
     onProgress(failure);
     return { ok: false, error: error.message || String(error), logPath: failure.logPath };

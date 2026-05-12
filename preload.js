@@ -38,6 +38,12 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   importHistoryZip: () => ipcRenderer.invoke('history:importZip'),
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
+  generateDishImage: (payload) => ipcRenderer.invoke('ai:generateDishImage', payload),
+  onAiProgress: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('ai:progress', listener);
+    return () => ipcRenderer.removeListener('ai:progress', listener);
+  },
   listTemplates: () => ipcRenderer.invoke('templates:list'),
   checkDiagnostics: () => ipcRenderer.invoke('diagnostics:check'),
   getAppVersion: () => ipcRenderer.invoke('app:version'),

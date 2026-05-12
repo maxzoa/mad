@@ -440,10 +440,21 @@
 
     .file-row {
       display: grid;
-      grid-template-columns: auto auto minmax(0, 1fr);
+      grid-template-columns: auto auto auto minmax(0, 1fr);
       gap: var(--space-2);
       align-items: center;
 	  min-width: 0;
+    }
+    .ai-generate-btn {
+      width: 54px;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      color: var(--color-text);
+    }
+    .ai-generate-btn[aria-busy="true"] {
+      color: var(--color-primary-hover);
+      border-color: rgba(154,167,255,0.56);
+      box-shadow: 0 0 22px rgba(154,167,255,0.24);
     }
     .file-input {
       position: fixed;
@@ -1039,6 +1050,109 @@
       border-radius: 999px;
       padding: 0.72rem 1rem;
     }
+    .ai-review-card {
+      width: min(1120px, calc(100vw - 32px));
+      max-height: calc(100dvh - 32px);
+      padding: var(--space-4);
+      gap: var(--space-3);
+    }
+    .ai-review-card h3 {
+      margin-bottom: 0;
+    }
+    .ai-review-layout {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(360px, 1.25fr) minmax(320px, 0.75fr);
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+    .ai-review-preview {
+      position: relative;
+      min-height: min(62dvh, 680px);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(154,167,255,0.24);
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255,173,205,0.14), transparent 32%),
+        linear-gradient(145deg, rgba(255,255,255,0.94), rgba(244,244,248,0.9));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.42);
+    }
+    .ai-review-preview img {
+      width: 100%;
+      height: 100%;
+      max-height: min(62dvh, 680px);
+      object-fit: contain;
+      padding: var(--space-3);
+    }
+    .ai-review-preview.is-loading::after {
+      content: 'Генерирую новую картинку...';
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: var(--space-4);
+      background: rgba(20,19,26,0.72);
+      color: var(--color-text);
+      font-size: var(--text-lg);
+      font-weight: 900;
+      text-align: center;
+      backdrop-filter: blur(8px);
+    }
+    .ai-review-side {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    .ai-review-prompt {
+      min-height: 190px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .ai-review-hint {
+      margin: 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      line-height: 1.45;
+    }
+    .ai-review-status {
+      min-height: 1.4em;
+      margin: 0;
+      color: var(--color-primary);
+      font-size: var(--text-sm);
+      font-weight: 800;
+    }
+    .ai-review-actions {
+      display: grid;
+      grid-template-columns: minmax(86px, 0.75fr) minmax(170px, 1.35fr) minmax(140px, 1fr);
+      align-items: stretch;
+      margin-top: auto;
+      justify-content: initial;
+    }
+    .ai-review-actions .ghost-btn,
+    .ai-review-actions .primary-btn {
+      width: 100%;
+      min-width: 0;
+      padding-inline: 0.7rem;
+      font-size: 0.94rem;
+      white-space: nowrap;
+    }
+    @media (max-width: 900px) {
+      .ai-review-layout {
+        grid-template-columns: 1fr;
+      }
+      .ai-review-preview {
+        min-height: 48dvh;
+      }
+      .ai-review-preview img {
+        max-height: 48dvh;
+      }
+      .ai-review-actions {
+        grid-template-columns: 1fr;
+      }
+    }
     .app-version {
       position: fixed;
       right: 12px;
@@ -1219,7 +1333,7 @@
 	  <button class="ghost-btn icon-btn" id="clearHistoryBtn" type="button" title="Очистить всю историю"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
 	</div>
 	</aside>
-    <div class="app-version" id="appVersion">v2.0.7</div>
+    <div class="app-version" id="appVersion">v2.0.21</div>
 
   <aside class="settings-drawer" id="settingsDrawer" aria-labelledby="settings-title">
     <div class="settings-header">
@@ -1651,7 +1765,7 @@
     const SETTINGS_KEY = 'mad-marathon-menu-settings-v2';
     const HISTORY_KEY = 'mad-marathon-menu-history-v1';
     const DRAFT_KEY = 'mad-marathon-menu-draft-v2';
-    const APP_VERSION = '2.0.7';
+    const APP_VERSION = '2.0.21';
 	const desktopBridge = window.desktopAPI || null;
     const CONFIG = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 	let currentMenuType = 'default';
@@ -2700,6 +2814,150 @@
       updateTemplateSource();
     }
 
+    async function applyGeneratedImageToBlock(name, sourceUrl, fileName) {
+      if (state[name].objectUrl) URL.revokeObjectURL(state[name].objectUrl);
+
+      const img = await loadImage(sourceUrl);
+      const preparedImage = downscaleImageForProcessing(img, 1600);
+      await nextFrame();
+      const processedCanvas = removeBackgroundAdvanced(preparedImage);
+      const blob = await canvasToBlob(processedCanvas);
+      const cleanUrl = URL.createObjectURL(blob);
+      const cleanImage = await loadImage(cleanUrl);
+
+      state[name].file = { name: fileName || `${name}.png` };
+      state[name].objectUrl = cleanUrl;
+      state[name].base64 = processedCanvas.toDataURL('image/png');
+      state[name].imageElement = cleanImage;
+    }
+
+    async function requestAiDishImage({ blockName, recipe, promptOverride = '', onProgress }) {
+      const requestId = `ai-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const removeProgressListener = typeof desktopBridge?.onAiProgress === 'function'
+        ? desktopBridge.onAiProgress((payload) => {
+            if (payload?.requestId !== requestId) return;
+            if (payload.label && typeof onProgress === 'function') onProgress(payload.label, payload);
+          })
+        : null;
+
+      try {
+        const result = await desktopBridge.generateDishImage({
+          requestId,
+          blockName,
+          recipe,
+          promptOverride
+        });
+
+        if (!result?.ok) {
+          throw new Error(result?.error || 'Не удалось сгенерировать картинку');
+        }
+
+        return result;
+      } finally {
+        if (typeof removeProgressListener === 'function') removeProgressListener();
+      }
+    }
+
+    function reviewGeneratedImage({ blockName, recipe, initialResult }) {
+      return new Promise((resolve) => {
+        let currentResult = initialResult;
+        let isBusy = false;
+        const modal = document.createElement('div');
+        modal.className = 'care-modal';
+        modal.innerHTML = `
+          <div class="care-card ai-review-card" role="dialog" aria-modal="true">
+            <h3>Режим заботы</h3>
+            <p class="care-lead">Проверь картинку перед вставкой в меню</p>
+            <div class="ai-review-layout">
+              <div class="ai-review-preview" data-ai-preview>
+                <img alt="Сгенерированная картинка блюда" data-ai-image>
+              </div>
+              <div class="ai-review-side">
+                <p class="ai-review-hint">Если картинка не попала в блюдо, поправь промпт и нажми «Повторить генерацию».</p>
+                <textarea class="ai-review-prompt" data-ai-prompt spellcheck="false"></textarea>
+                <p class="ai-review-status" data-ai-status></p>
+                <div class="care-actions ai-review-actions">
+                  <button class="ghost-btn" type="button" data-ai-action="cancel">Отмена</button>
+                  <button class="ghost-btn" type="button" data-ai-action="repeat">Повторить генерацию</button>
+                  <button class="primary-btn" type="button" data-ai-action="use">Использовать эту</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.append(modal);
+
+        const preview = modal.querySelector('[data-ai-preview]');
+        const image = modal.querySelector('[data-ai-image]');
+        const promptInput = modal.querySelector('[data-ai-prompt]');
+        const status = modal.querySelector('[data-ai-status]');
+        const cancelButton = modal.querySelector('[data-ai-action="cancel"]');
+        const repeatButton = modal.querySelector('[data-ai-action="repeat"]');
+        const useButton = modal.querySelector('[data-ai-action="use"]');
+
+        const renderResult = ({ keepPrompt = false } = {}) => {
+          image.src = currentResult?.dataUrl || '';
+          if (!keepPrompt) promptInput.value = currentResult?.prompt || '';
+          status.textContent = 'Картинка готова к проверке.';
+        };
+
+        const setBusy = (busy, label = '') => {
+          isBusy = busy;
+          preview.classList.toggle('is-loading', busy);
+          repeatButton.disabled = busy;
+          useButton.disabled = busy;
+          cancelButton.disabled = busy;
+          status.textContent = label;
+        };
+
+        const close = (value) => {
+          if (isBusy) return;
+          modal.remove();
+          resolve(value);
+        };
+
+        repeatButton.addEventListener('click', async () => {
+          if (isBusy) return;
+          const promptOverride = promptInput.value.trim();
+          if (!promptOverride) {
+            status.textContent = 'Промпт пустой, генератору не за что зацепиться.';
+            promptInput.focus();
+            return;
+          }
+
+          setBusy(true, 'Запускаю повторную генерацию...');
+          try {
+            currentResult = await requestAiDishImage({
+              blockName,
+              recipe,
+              promptOverride,
+              onProgress: (label) => {
+                status.textContent = label;
+              }
+            });
+            image.src = currentResult?.dataUrl || '';
+            status.textContent = `Картинка готова. Итоговый промпт: ${currentResult?.prompt || promptOverride}`;
+            showFeedback('Новая картинка готова', '✓');
+          } catch (error) {
+            console.error('Ошибка повторной ИИ-генерации:', error);
+            status.textContent = error?.message || 'Не удалось повторить генерацию.';
+            showFeedback(error?.message || 'Не удалось повторить генерацию', '!');
+          } finally {
+            setBusy(false, status.textContent || 'Картинка готова к проверке.');
+          }
+        });
+
+        useButton.addEventListener('click', () => close(currentResult));
+        cancelButton.addEventListener('click', () => close(null));
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) close(null);
+        });
+
+        renderResult();
+        promptInput.focus();
+      });
+    }
+
     function buildForm() {
 	  document.getElementById('dayTitleInput').value = CONFIG.dayTitle.text || '';
       blocksContainer.innerHTML = '';
@@ -2767,6 +3025,12 @@
           fileInput.blur();
           restoreScrollStateSoon(scrollSnapshot);
         });
+        const aiBtn = document.createElement('button');
+        aiBtn.type = 'button';
+        aiBtn.className = 'ghost-btn icon-btn ai-generate-btn';
+        aiBtn.dataset.tooltip = 'Сгенерировать в ИИ';
+        aiBtn.setAttribute('aria-label', 'Сгенерировать в ИИ');
+        aiBtn.textContent = 'ИИ';
         const fileNameChip = document.createElement('div');
         fileNameChip.className = 'file-name-chip';
         fileNameChip.textContent = state[name].file?.name || 'Файл не выбран';
@@ -2786,6 +3050,73 @@
           fileNameChip.textContent = 'Файл не выбран';
           renderPreview();
           scheduleDraftSave();
+        });
+        aiBtn.addEventListener('click', async () => {
+          const recipe = String(state[name].text || '').trim();
+          if (!recipe) {
+            showFeedback('Сначала добавь описание или рецепт', '!');
+            setStatus('ИИ нужен текст рецепта, чтобы понять, какую картинку генерировать.');
+            return;
+          }
+          if (!desktopBridge || typeof desktopBridge.generateDishImage !== 'function') {
+            showFeedback('ИИ доступен только в desktop-версии', '!');
+            return;
+          }
+
+          const scrollSnapshot = captureScrollState();
+          const setBusy = (label) => {
+            fileNameChip.textContent = label;
+            setStatus(label);
+            restoreScrollStateSoon(scrollSnapshot);
+          };
+
+          aiBtn.setAttribute('aria-busy', 'true');
+          aiBtn.disabled = true;
+          pickerBtn.disabled = true;
+          clearBtn.disabled = true;
+          setBusy('ИИ формулирует промпт...');
+          showFeedback(`Генерирую картинку для "${name}"...`, 'ИИ');
+
+          try {
+            const result = await requestAiDishImage({
+              blockName: name,
+              recipe,
+              onProgress: (label) => setBusy(label)
+            });
+
+            setBusy('Проверь картинку в большом окне...');
+            const approvedResult = await reviewGeneratedImage({
+              blockName: name,
+              recipe,
+              initialResult: result
+            });
+
+            if (!approvedResult) {
+              fileNameChip.textContent = state[name].file?.name || 'Файл не выбран';
+              setStatus('ИИ-генерация отменена.');
+              showFeedback('Картинка не добавлена', '!');
+              return;
+            }
+
+            setBusy('Убираю фон...');
+            await applyGeneratedImageToBlock(name, approvedResult.dataUrl, approvedResult.fileName || `${name}-ai.png`);
+            fileNameChip.textContent = state[name].file?.name || `${name}-ai.png`;
+            await renderPreview();
+            scheduleDraftSave();
+            showFeedback(`ИИ-картинка добавлена: ${name}`, '✓');
+            setStatus(`ИИ сгенерировал картинку: ${approvedResult.prompt}`);
+          } catch (error) {
+            console.error('Ошибка ИИ-генерации картинки:', error);
+            fileNameChip.textContent = state[name].file?.name || 'Файл не выбран';
+            showFeedback(error?.message || 'Не удалось сгенерировать картинку', '!');
+            setStatus(error?.message || 'Не удалось сгенерировать картинку через ИИ.');
+          } finally {
+            aiBtn.disabled = false;
+            pickerBtn.disabled = false;
+            clearBtn.disabled = false;
+            aiBtn.removeAttribute('aria-busy');
+            restoreScrollStateSoon(scrollSnapshot);
+          }
         });
 		fileInput.addEventListener('change', async () => {
           const file = fileInput.files?.[0] || null;
@@ -2835,7 +3166,7 @@
           }
 		  });
 		  
-		row.append(fileInput, pickerBtn, clearBtn, fileNameChip);
+		row.append(fileInput, pickerBtn, aiBtn, clearBtn, fileNameChip);
 		fileField.append(row);
 
 		card.append(kcalField, textField, fileField);

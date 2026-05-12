@@ -25,6 +25,7 @@ function copyTemplates(targetDir) {
   if (fs.existsSync(updateSourcePath)) {
     fs.copyFileSync(updateSourcePath, path.join(targetDir, updateSourceFile));
   }
+
 }
 
 function prepareReleaseDir() {

@@ -22,6 +22,12 @@ namespace MadMarathonMenuLauncher
         [STAThread]
         private static void Main()
         {
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && UpdaterMode.TryRun(args))
+            {
+                return;
+            }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new SplashForm(ProductTitle));
@@ -203,6 +209,262 @@ namespace MadMarathonMenuLauncher
             if (String.IsNullOrEmpty(arg)) return "\"\"";
             if (arg.IndexOfAny(new char[] { ' ', '\t', '"' }) < 0) return arg;
             return "\"" + arg.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+    }
+
+    internal static class UpdaterMode
+    {
+        private const string ApplyArg = "--apply-update";
+        private const string WorkerArg = "--apply-update-worker";
+
+        internal static bool TryRun(string[] args)
+        {
+            if (args == null || args.Length < 2) return false;
+
+            if (String.Equals(args[1], ApplyArg, StringComparison.OrdinalIgnoreCase))
+            {
+                StartWorker(args);
+                return true;
+            }
+
+            if (String.Equals(args[1], WorkerArg, StringComparison.OrdinalIgnoreCase))
+            {
+                RunWorker(args);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void StartWorker(string[] args)
+        {
+            if (args.Length < 7) return;
+
+            string tempUpdater = Path.Combine(Path.GetTempPath(), "mad-marathon-menu-updater.exe");
+            string currentExe = Assembly.GetExecutingAssembly().Location;
+            File.Copy(currentExe, tempUpdater, true);
+
+            ProcessStartInfo startInfo = new ProcessStartInfo(tempUpdater);
+            startInfo.UseShellExecute = false;
+            startInfo.CreateNoWindow = true;
+            startInfo.WorkingDirectory = Path.GetDirectoryName(args[4]);
+            startInfo.Arguments = JoinArguments(new string[]
+            {
+                WorkerArg,
+                args[2],
+                args[3],
+                args[4],
+                args[5],
+                args[6]
+            });
+
+            Process.Start(startInfo);
+        }
+
+        private static void RunWorker(string[] args)
+        {
+            if (args.Length < 7) return;
+
+            int appPid = 0;
+            Int32.TryParse(args[2], out appPid);
+            string downloadPath = args[3];
+            string targetPath = args[4];
+            string backupPath = args[5];
+            string logPath = args[6];
+
+            int exitCode = 1;
+            WriteLog(logPath, "native updater started");
+            WriteLog(logPath, "download=" + downloadPath);
+            WriteLog(logPath, "target=" + targetPath);
+
+            try
+            {
+                WaitForProcessExit(appPid, logPath);
+
+                if (!File.Exists(downloadPath))
+                {
+                    throw new FileNotFoundException("Downloaded update file was not found.", downloadPath);
+                }
+
+                long downloadSize = new FileInfo(downloadPath).Length;
+                for (int attempt = 1; attempt <= 40; attempt++)
+                {
+                    try
+                    {
+                        WriteLog(logPath, "copy attempt " + attempt);
+
+                        if (File.Exists(targetPath))
+                        {
+                            File.Copy(targetPath, backupPath, true);
+                        }
+
+                        File.Copy(downloadPath, targetPath, true);
+                        long targetSize = new FileInfo(targetPath).Length;
+                        if (targetSize != downloadSize)
+                        {
+                            throw new IOException("Size mismatch after copy.");
+                        }
+
+                        exitCode = 0;
+                        WriteLog(logPath, "copy completed");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLog(logPath, "copy attempt failed: " + ex.Message);
+                        Thread.Sleep(1000);
+                    }
+                }
+
+                if (exitCode != 0)
+                {
+                    throw new IOException("Unable to replace launcher.");
+                }
+
+                StartUpdatedApplication(targetPath);
+                WriteLog(logPath, "restarted updated application");
+            }
+            catch (Exception ex)
+            {
+                WriteLog(logPath, "native updater failed: " + ex.Message);
+
+                try
+                {
+                    if (File.Exists(backupPath))
+                    {
+                        File.Copy(backupPath, targetPath, true);
+                    }
+                }
+                catch (Exception restoreError)
+                {
+                    WriteLog(logPath, "restore failed: " + restoreError.Message);
+                }
+
+                try
+                {
+                    if (File.Exists(targetPath))
+                    {
+                        StartUpdatedApplication(targetPath);
+                    }
+                }
+                catch (Exception restartError)
+                {
+                    WriteLog(logPath, "restart after failure failed: " + restartError.Message);
+                }
+            }
+            finally
+            {
+                if (exitCode == 0)
+                {
+                    TryDelete(downloadPath);
+                    TryDelete(backupPath);
+                }
+                else
+                {
+                    WriteLog(logPath, "update files were kept for diagnostics");
+                }
+
+                ScheduleSelfDelete(logPath);
+            }
+        }
+
+        private static void WaitForProcessExit(int appPid, string logPath)
+        {
+            if (appPid <= 0) return;
+
+            WriteLog(logPath, "waiting for app pid " + appPid);
+            DateTime deadline = DateTime.Now.AddSeconds(120);
+            while (DateTime.Now < deadline)
+            {
+                try
+                {
+                    Process process = Process.GetProcessById(appPid);
+                    if (process.HasExited) break;
+                }
+                catch
+                {
+                    break;
+                }
+
+                Thread.Sleep(500);
+            }
+
+            WriteLog(logPath, "app process released");
+        }
+
+        private static void StartUpdatedApplication(string targetPath)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo(targetPath);
+            startInfo.WorkingDirectory = Path.GetDirectoryName(targetPath);
+            startInfo.UseShellExecute = false;
+            Process.Start(startInfo);
+        }
+
+        private static void WriteLog(string logPath, string message)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(logPath));
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + message + Environment.NewLine;
+                File.AppendAllText(logPath, line, Encoding.UTF8);
+            }
+            catch
+            {
+                // Diagnostics must never block the updater.
+            }
+        }
+
+        private static void TryDelete(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath)) File.Delete(filePath);
+            }
+            catch
+            {
+            }
+        }
+
+        private static void ScheduleSelfDelete(string logPath)
+        {
+            try
+            {
+                string selfPath = Assembly.GetExecutingAssembly().Location;
+                if (!selfPath.StartsWith(Path.GetTempPath(), StringComparison.OrdinalIgnoreCase)) return;
+
+                string command = "/C ping 127.0.0.1 -n 3 > nul & del /F /Q " + QuoteForCmd(selfPath);
+                ProcessStartInfo startInfo = new ProcessStartInfo("cmd.exe", command);
+                startInfo.CreateNoWindow = true;
+                startInfo.UseShellExecute = false;
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                WriteLog(logPath, "self cleanup failed: " + ex.Message);
+            }
+        }
+
+        private static string JoinArguments(string[] args)
+        {
+            StringBuilder builder = new StringBuilder();
+            foreach (string arg in args)
+            {
+                if (builder.Length > 0) builder.Append(' ');
+                builder.Append(QuoteArgument(arg));
+            }
+
+            return builder.ToString();
+        }
+
+        private static string QuoteArgument(string arg)
+        {
+            if (String.IsNullOrEmpty(arg)) return "\"\"";
+            return "\"" + arg.Replace("\"", "\\\"") + "\"";
+        }
+
+        private static string QuoteForCmd(string value)
+        {
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
     }
 
