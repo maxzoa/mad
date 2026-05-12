@@ -45,6 +45,11 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   installLatestUpdate: () => ipcRenderer.invoke('updates:installLatest'),
   installUpdate: (update) => ipcRenderer.invoke('updates:install', update),
+  onUpdateProgress: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('updates:progress', listener);
+    return () => ipcRenderer.removeListener('updates:progress', listener);
+  },
   openUpdateDownload: (url) => ipcRenderer.invoke('updates:open', url),
   loadDraft: () => ipcRenderer.invoke('draft:load'),
   saveDraft: (draft) => ipcRenderer.invoke('draft:save', draft),

@@ -16,7 +16,7 @@ const MENU_EXPORTS_DIR = 'saved-menus';
 const SETTINGS_FILE = 'menu-settings.json';
 const TEMPLATE_DIR = 'templates';
 const TEMPLATE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp']);
-const APP_VERSION = '2.0.5';
+const APP_VERSION = '2.0.6';
 const UPDATE_SOURCE_FILE = 'update-source.json';
 const DEFAULT_UPDATE_MANIFEST_URL = '';
 const STABLE_LAUNCHER_NAME = 'Конструктор меню.exe';
@@ -363,12 +363,14 @@ function normalizeUpdateManifest(raw) {
     ? firstAsset.name || firstAsset.fileName || ''
     : '';
   const digest = String(firstAsset.digest || '').trim().toLowerCase();
+  const size = Number(data.size || firstAsset.size || 0) || 0;
 
   return {
     latestVersion,
     downloadUrl: String(data.downloadUrl || data.download_url || assetUrl || data.html_url || data.url || ''),
     fileName: safeFileName(data.fileName || data.file_name || assetName || STABLE_LAUNCHER_NAME),
     sha256: String(data.sha256 || data.checksum || digest.replace(/^sha256:/, '') || '').trim().toLowerCase(),
+    size,
     releaseUrl: String(data.releaseUrl || data.release_url || data.html_url || ''),
     notes: String(data.notes || data.body || data.description || ''),
     publishedAt: data.publishedAt || data.published_at || ''
@@ -413,6 +415,7 @@ async function checkForUpdates() {
       downloadUrl: manifest.downloadUrl || manifest.releaseUrl,
       fileName: manifest.fileName || STABLE_LAUNCHER_NAME,
       sha256: manifest.sha256 || '',
+      size: manifest.size || 0,
       releaseUrl: manifest.releaseUrl || manifest.downloadUrl,
       notes: manifest.notes,
       publishedAt: manifest.publishedAt,
@@ -440,7 +443,17 @@ function getLauncherPath() {
   }
 }
 
-async function downloadFile(url, targetPath) {
+function reportUpdateProgress(onProgress, payload) {
+  if (typeof onProgress !== 'function') return;
+  try {
+    onProgress({
+      at: Date.now(),
+      ...payload
+    });
+  } catch (_) {}
+}
+
+async function downloadFile(url, targetPath, { expectedSize = 0, onProgress } = {}) {
   if (!/^https?:\/\//i.test(String(url || ''))) {
     throw new Error('Некорректная ссылка обновления');
   }
@@ -451,7 +464,37 @@ async function downloadFile(url, targetPath) {
   }
 
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await pipeline(Readable.fromWeb(response.body), fsSync.createWriteStream(targetPath));
+
+  const totalBytes = Number(response.headers.get('content-length')) || expectedSize || 0;
+  let downloadedBytes = 0;
+  const stream = Readable.fromWeb(response.body);
+
+  stream.on('data', (chunk) => {
+    downloadedBytes += chunk.length;
+    const downloadPercent = totalBytes > 0
+      ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100))
+      : null;
+
+    reportUpdateProgress(onProgress, {
+      stage: 'download',
+      label: 'Скачиваем обновление',
+      percent: downloadPercent === null ? null : Math.min(90, Math.max(1, Math.round(downloadPercent * 0.9))),
+      downloadPercent,
+      downloadedBytes,
+      totalBytes
+    });
+  });
+
+  await pipeline(stream, fsSync.createWriteStream(targetPath));
+
+  reportUpdateProgress(onProgress, {
+    stage: 'download-complete',
+    label: 'Обновление скачано',
+    percent: 90,
+    downloadPercent: 100,
+    downloadedBytes,
+    totalBytes
+  });
 }
 
 function sha256File(filePath) {
@@ -464,7 +507,7 @@ function sha256File(filePath) {
   });
 }
 
-async function installUpdate(update) {
+async function installUpdate(update, onProgress) {
   if (!update?.downloadUrl) throw new Error('В manifest нет downloadUrl');
 
   const launcherPath = getLauncherPath();
@@ -486,9 +529,25 @@ async function installUpdate(update) {
   await fs.rm(scriptPath, { force: true });
   await fs.writeFile(logPath, `Update started: ${new Date().toISOString()}\r\n`, 'utf8');
 
-  await downloadFile(update.downloadUrl, downloadPath);
+  reportUpdateProgress(onProgress, {
+    stage: 'prepare',
+    label: 'Готовим обновление',
+    percent: 0,
+    logPath
+  });
+
+  await downloadFile(update.downloadUrl, downloadPath, {
+    expectedSize: Number(update.size || 0),
+    onProgress
+  });
 
   if (update.sha256) {
+    reportUpdateProgress(onProgress, {
+      stage: 'verify',
+      label: 'Проверяем целостность файла',
+      percent: 94,
+      logPath
+    });
     const actual = await sha256File(downloadPath);
     if (actual.toLowerCase() !== String(update.sha256).toLowerCase()) {
       await fs.rm(downloadPath, { force: true });
@@ -556,6 +615,13 @@ async function installUpdate(update) {
 
   await fs.writeFile(scriptPath, `\uFEFF${script}`, 'utf16le');
 
+  reportUpdateProgress(onProgress, {
+    stage: 'install',
+    label: 'Готовим перезапуск',
+    percent: 98,
+    logPath
+  });
+
   const launchCommand = [
     '$ErrorActionPreference = "Stop"',
     `Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',${psLiteral(scriptPath)})`
@@ -569,24 +635,22 @@ async function installUpdate(update) {
   });
   child.unref();
 
+  reportUpdateProgress(onProgress, {
+    stage: 'restart',
+    label: 'Перезапускаем приложение',
+    percent: 100,
+    logPath
+  });
+
   setTimeout(() => app.quit(), 1200);
   return { ok: true, targetPath, logPath };
 }
 
-async function installLatestUpdateIfAvailable() {
+async function installLatestUpdateIfAvailable(onProgress) {
   const update = await checkForUpdates();
   if (!update?.updateAvailable || !update.downloadUrl) return { ok: true, updated: false, update };
-  await installUpdate(update);
+  await installUpdate(update, onProgress);
   return { ok: true, updated: true, update };
-}
-
-function scheduleSilentUpdateCheck() {
-  if (!app.isPackaged) return;
-  setTimeout(() => {
-    installLatestUpdateIfAvailable().catch((error) => {
-      console.error('Silent update failed:', error);
-    });
-  }, 6500);
 }
 
 async function loadDraftForUi() {
@@ -770,14 +834,29 @@ ipcMain.handle('updates:installLatest', async () => {
   try {
     return await installLatestUpdateIfAvailable();
   } catch (error) {
-    return { ok: false, error: error.message || String(error) };
+    return {
+      ok: false,
+      error: error.message || String(error),
+      logPath: path.join(app.getPath('userData'), 'updates', 'last-update.log')
+    };
   }
 });
-ipcMain.handle('updates:install', async (_event, update) => {
+ipcMain.handle('updates:install', async (event, update) => {
+  const onProgress = (payload) => {
+    event.sender.send('updates:progress', payload);
+  };
+
   try {
-    return await installUpdate(update);
+    return await installUpdate(update, onProgress);
   } catch (error) {
-    return { ok: false, error: error.message || String(error) };
+    const failure = {
+      stage: 'error',
+      label: error.message || String(error),
+      percent: null,
+      logPath: path.join(app.getPath('userData'), 'updates', 'last-update.log')
+    };
+    onProgress(failure);
+    return { ok: false, error: error.message || String(error), logPath: failure.logPath };
   }
 });
 ipcMain.handle('updates:open', async (_event, url) => {
@@ -801,7 +880,6 @@ ipcMain.handle('image:save', async (_event, { dataUrl, fileName }) => {
 
 app.whenReady().then(() => {
   createWindow();
-  scheduleSilentUpdateCheck();
 });
 
 app.on('window-all-closed', () => {
